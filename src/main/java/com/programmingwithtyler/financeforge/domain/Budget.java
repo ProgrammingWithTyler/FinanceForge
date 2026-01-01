@@ -19,10 +19,10 @@ public class Budget {
     @Column(name = "category", nullable = false)
     private BudgetCategory budgetCategory;
 
-    @Column(name = "monthly_amount", precision = 19, scale = 2, nullable = false)
+    @Column(name = "monthly_amount", precision = 19, scale = 4, nullable = false)
     private BigDecimal monthlyAllocationAmount;
 
-    @Column(name = "current_spent_amount", nullable = false, precision = 19, scale = 2)
+    @Column(name = "current_spent_amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal currentSpentAmount;
 
     @Column(name = "period_start", nullable = false)

@@ -1,9 +1,6 @@
 package com.programmingwithtyler.financeforge.domain;
 
 import jakarta.persistence.*;
-import org.hibernate.annotations.UpdateTimestamp;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -27,10 +24,10 @@ public class Account {
     @Column(name = "description", length = 500)
     private String description;
 
-    @Column(name = "start_balance", nullable = false, precision = 19, scale = 2)
+    @Column(name = "start_balance", nullable = false, precision = 19, scale = 4)
     private BigDecimal startingBalance;
 
-    @Column(name = "current_balance", nullable = false, precision = 19, scale = 2)
+    @Column(name = "current_balance", nullable = false, precision = 19, scale = 4)
     private BigDecimal currentBalance;
 
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -53,25 +50,15 @@ public class Account {
     public Account() {
     }
 
-    public Account(Long id, String accountName, AccountType accountType, String description, BigDecimal startingBalance, BigDecimal currentBalance, LocalDateTime createdAt, LocalDateTime updatedAt) {
-        this.id = id;
-        this.accountName = accountName;
-        this.accountType = accountType;
-        this.description = description;
-        this.startingBalance = startingBalance;
-        this.currentBalance = currentBalance;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
-    }
-
-    public Account(String accountName, AccountType accountType, String description, BigDecimal startingBalance, BigDecimal currentBalance) {
+    public Account(String accountName, AccountType accountType,
+                   String description, BigDecimal startingBalance,
+                   BigDecimal currentBalance) {
         this.accountName = accountName;
         this.accountType = accountType;
         this.description = description;
         this.startingBalance = startingBalance;
         this.currentBalance = currentBalance;
     }
-
 
 
     public Long getId() {
@@ -160,8 +147,6 @@ public class Account {
             ", \ndescription='" + description + '\'' +
             ", \nstartingBalance=" + startingBalance +
             ", \ncurrentBalance=" + currentBalance +
-            ", \ncreatedAt=" + createdAt +
-            ", \nupdatedAt=" + updatedAt +
             "\n}";
     }
 }
