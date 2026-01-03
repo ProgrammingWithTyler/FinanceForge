@@ -27,9 +27,9 @@ public class Transaction {
     @JoinColumn(name = "destination_account_id")
     private Account destinationAccount;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "budget_category_id")
-    private BudgetCategory budgetCategory;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "budget_category", nullable = false)
+    private BudgetCategory category;
 
     @Column(name = "transaction_date", nullable = false)
     private LocalDate transactionDate;
@@ -67,7 +67,7 @@ public class Transaction {
         TransactionType transactionType,
         Account sourceAccount,
         Account destinationAccount,
-        BudgetCategory budgetCategory,
+        BudgetCategory category,
         BigDecimal amount,
         String currency,
         LocalDate transactionDate
@@ -75,7 +75,7 @@ public class Transaction {
         this.transactionType = transactionType;
         this.sourceAccount = sourceAccount;
         this.destinationAccount = destinationAccount;
-        this.budgetCategory = budgetCategory;
+        this.category = category;
         this.amount = amount;
         this.currency = currency != null ? currency : "USD";
         this.transactionDate = transactionDate;
@@ -116,11 +116,11 @@ public class Transaction {
     }
 
     public BudgetCategory getBudgetCategory() {
-        return budgetCategory;
+        return category;
     }
 
     public void setBudgetCategory(BudgetCategory budgetCategory) {
-        this.budgetCategory = budgetCategory;
+        this.category = budgetCategory;
     }
 
     public LocalDate getTransactionDate() {
@@ -191,7 +191,7 @@ public class Transaction {
             ", transactionType=" + transactionType +
             ", sourceAccountId=" + (sourceAccount != null ? sourceAccount.getId() : null) +
             ", destinationAccountId=" + (destinationAccount != null ? destinationAccount.getId() : null) +
-            ", budgetCategory=" + budgetCategory +
+            ", budgetCategory=" + category +
             ", transactionDate=" + transactionDate +
             ", amount=" + amount +
             ", currency='" + currency + '\'' +
