@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: financeforge_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: financeforge_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - financeforge_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d financeforge_dev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - financeforge_network
+
+volumes:
+  financeforge_postgres_data:
+    name: financeforge_postgres_data
+
+networks:
+  financeforge_network:
+    name: financeforge_network
+    driver: bridge
