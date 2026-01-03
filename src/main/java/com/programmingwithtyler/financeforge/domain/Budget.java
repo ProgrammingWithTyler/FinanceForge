@@ -17,7 +17,7 @@ public class Budget {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
-    private BudgetCategory budgetCategory;
+    private BudgetCategory category;
 
     @Column(name = "monthly_amount", precision = 19, scale = 4, nullable = false)
     private BigDecimal monthlyAllocationAmount;
@@ -51,11 +51,11 @@ public class Budget {
     public Budget() {
     }
 
-    public Budget(Long id, BudgetCategory budgetCategory, BigDecimal monthlyAllocationAmount,
+    public Budget(Long id, BudgetCategory category, BigDecimal monthlyAllocationAmount,
                   BigDecimal currentSpentAmount, LocalDate periodStart, LocalDate periodEnd, LocalDateTime createdAt,
                   LocalDateTime updatedAt) {
         this.id = id;
-        this.budgetCategory = budgetCategory;
+        this.category = category;
         this.monthlyAllocationAmount = monthlyAllocationAmount;
         this.currentSpentAmount = currentSpentAmount;
         this.periodStart = periodStart;
@@ -73,11 +73,11 @@ public class Budget {
     }
 
     public BudgetCategory getBudgetCategory() {
-        return budgetCategory;
+        return category;
     }
 
     public void setBudgetCategory(BudgetCategory budgetCategory) {
-        this.budgetCategory = budgetCategory;
+        this.category = budgetCategory;
     }
 
     public BigDecimal getMonthlyAllocationAmount() {
@@ -145,7 +145,7 @@ public class Budget {
     public String toString() {
         return "Budget {" +
             "\nid=" + id +
-            ", \nbudgetCategory=" + budgetCategory +
+            ", \nbudgetCategory=" + category +
             ", \nmonthlyAllocationAmount=" + monthlyAllocationAmount +
             ", \ncurrentSpentAmount=" + currentSpentAmount +
             ", \nperiodStart=" + periodStart +
