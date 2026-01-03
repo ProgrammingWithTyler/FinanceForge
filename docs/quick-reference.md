@@ -1,8 +1,8 @@
 # FinanceForge Backend Architecture – Quick Reference
 
-**Version**: 1.0 (MVP)
-**Audience**: New hires, contractors, senior engineers
-**Goal**: Immediate understanding of layers, boundaries, and invariants
+**Version**: 1.0 (MVP)\
+**Audience**: New hires, contractors, senior engineers\
+**Goal**: Immediate understanding of layers, boundaries, and invariants\
 
 For full architectural details, see [FinanceForge Backend Architecture](architecture.md)
 
@@ -95,6 +95,7 @@ HTTP Response
 **Local**: Docker PostgreSQL + Spring Boot DevTools
 **Prod**: Single JAR, managed PostgreSQL, Nginx/Cloud LB
 **Rollback**: Redeploy previous JAR; compensating Flyway migration for schema
+Local PostgreSQL runs via Docker on port 5433 to avoid conflicts with local installations.
 
 ---
 
