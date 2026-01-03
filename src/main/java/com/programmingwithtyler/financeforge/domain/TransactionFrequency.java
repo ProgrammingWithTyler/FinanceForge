@@ -4,6 +4,7 @@ public enum TransactionFrequency {
     DAILY,
     WEEKLY,
     MONTHLY,
+    QUARTERLY,
     YEARLY
 }
 
