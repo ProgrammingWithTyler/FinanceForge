@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="FinanceForge Banner" style="max-width: 800px; width: 100%;">
+</p>
+
 # FinanceForge
 
 A backend-first personal finance management API built with Spring Boot 3.5.8 and Java 21. FinanceForge demonstrates rigorous domain modeling, transactional correctness, and clean architectural boundaries in a financial domain context.
