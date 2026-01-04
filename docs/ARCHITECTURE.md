@@ -415,16 +415,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 ## 4. Deferred Concerns
 
-| Feature | Status | Reason | Future Approach |
-|---------|--------|--------|----------------|
-| **Auth & AuthZ** | Not implemented | MVP focus | Spring Security + JWT/session |
-| **Multi-Tenancy** | Not implemented | Single-user MVP | Add `userId` FK + row-level security |
-| **Caching** | Not implemented | Premature optimization | `@Cacheable` after profiling |
-| **Event-Driven** | Not implemented | No external integrations | `@EventListener` or Kafka if needed |
-| **CQRS** | Not implemented | Single DB sufficient | Separate read models if writes slow reads |
-| **RedQuery** | Deferred | JPA sufficient | Custom DSL if Criteria API unmanageable |
-| **API Versioning** | Not implemented | No external consumers | `/api/v1/...` when backward compat required |
-| **Distributed Tracing** | Not implemented | Monolith, simple logs | Sleuth + Zipkin if microservices |
+| Feature                 | Status          | Reason                   | Future Approach                             |
+|-------------------------|-----------------|--------------------------|---------------------------------------------|
+| **Auth & AuthZ**        | Not implemented | MVP focus                | Spring Security + JWT/session               |
+| **Multi-Tenancy**       | Not implemented | Single-user MVP          | Add `userId` FK + row-level security        |
+| **Caching**             | Not implemented | Premature optimization   | `@Cacheable` after profiling                |
+| **Event-Driven**        | Not implemented | No external integrations | `@EventListener` or Kafka if needed         |
+| **CQRS**                | Not implemented | Single DB sufficient     | Separate read models if writes slow reads   |
+| **RedQuery**            | Deferred        | JPA sufficient           | Custom DSL if Criteria API unmanageable     |
+| **API Versioning**      | Not implemented | No external consumers    | `/api/v1/...` when backward compat required |
+| **Distributed Tracing** | Not implemented | Monolith, simple logs    | Sleuth + Zipkin if microservices            |
 
 ---
 
@@ -432,12 +432,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 ### Layer Boundaries
 
-| Boundary | What Crosses | Cannot Cross |
-|----------|-------------|--------------|
-| **Controller ↔ Service** | Commands, Queries, DTOs | Domain Entities, HTTP Concerns |
-| **Service ↔ Repository** | Domain Entities, IDs, Filters | DTOs, HTTP Concerns, Business Logic |
-| **Service ↔ Domain** | Entities, Value Objects | Persistence Logic, DTOs |
-| **Repository ↔ Database** | JPA Entities, Queries | Business Logic, DTOs |
+| Boundary                  | What Crosses                  | Cannot Cross                        |
+|---------------------------|-------------------------------|-------------------------------------|
+| **Controller ↔ Service**  | Commands, Queries, DTOs       | Domain Entities, HTTP Concerns      |
+| **Service ↔ Repository**  | Domain Entities, IDs, Filters | DTOs, HTTP Concerns, Business Logic |
+| **Service ↔ Domain**      | Entities, Value Objects       | Persistence Logic, DTOs             |
+| **Repository ↔ Database** | JPA Entities, Queries         | Business Logic, DTOs                |
 
 ---
 
@@ -501,16 +501,16 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 ## 6. Technology Stack
 
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| **API** | Spring Web (REST) | Industry standard REST framework; minimal boilerplate; excellent documentation; broad ecosystem support |
-| **Validation** | Jakarta Validation (Hibernate Validator) | Declarative constraint validation; annotation-based; seamless Spring integration; extensible custom validators |
-| **Service** | Spring Core (DI + AOP) | Dependency injection for testability; AOP for transaction management; mature, battle-tested framework |
-| **Persistence** | Spring Data JPA (Hibernate) | Abstracts JDBC boilerplate; supports derived queries and custom JPQL; reduces manual SQL while allowing native queries when needed |
-| **Database** | PostgreSQL 15+ | ACID compliance for financial integrity; JSON support for flexible schemas; excellent performance; open-source; mature tooling |
-| **Build** | Maven | Dependency management; plugin ecosystem; standardized build lifecycle; widely adopted in enterprise Java |
-| **Testing** | JUnit 5 + Mockito + Testcontainers | Modern test framework (JUnit 5); powerful mocking (Mockito); real database integration tests (Testcontainers) |
-| **Migration** | Flyway | Version-controlled schema migrations; idempotent; supports rollback via versioned SQL; integrates with CI/CD |
+| Layer           | Technology                               | Rationale                                                                                                                          |
+|-----------------|------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| **API**         | Spring Web (REST)                        | Industry standard REST framework; minimal boilerplate; excellent documentation; broad ecosystem support                            |
+| **Validation**  | Jakarta Validation (Hibernate Validator) | Declarative constraint validation; annotation-based; seamless Spring integration; extensible custom validators                     |
+| **Service**     | Spring Core (DI + AOP)                   | Dependency injection for testability; AOP for transaction management; mature, battle-tested framework                              |
+| **Persistence** | Spring Data JPA (Hibernate)              | Abstracts JDBC boilerplate; supports derived queries and custom JPQL; reduces manual SQL while allowing native queries when needed |
+| **Database**    | PostgreSQL 15+                           | ACID compliance for financial integrity; JSON support for flexible schemas; excellent performance; open-source; mature tooling     |
+| **Build**       | Maven                                    | Dependency management; plugin ecosystem; standardized build lifecycle; widely adopted in enterprise Java                           |
+| **Testing**     | JUnit 5 + Mockito + Testcontainers       | Modern test framework (JUnit 5); powerful mocking (Mockito); real database integration tests (Testcontainers)                      |
+| **Migration**   | Flyway                                   | Version-controlled schema migrations; idempotent; supports rollback via versioned SQL; integrates with CI/CD                       |
 
 ---
 
@@ -580,12 +580,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
 ## 8. When to Revisit This Architecture
 
-| Trigger | Consideration |
-|---------|--------------|
-| **Traffic >100K Users** | Caching, read replicas, horizontal scaling |
-| **Multiple Teams** | Microservices with bounded contexts |
-| **External Integrations** | Event-driven architecture with message queues |
-| **Complex Reporting** | CQRS with separate read models |
+| Trigger                     | Consideration                                         |
+|-----------------------------|-------------------------------------------------------|
+| **Traffic >100K Users**     | Caching, read replicas, horizontal scaling            |
+| **Multiple Teams**          | Microservices with bounded contexts                   |
+| **External Integrations**   | Event-driven architecture with message queues         |
+| **Complex Reporting**       | CQRS with separate read models                        |
 | **Regulatory Requirements** | Audit logs, encryption at rest, compliance frameworks |
 
 ### What We'd Change (If We Had To)

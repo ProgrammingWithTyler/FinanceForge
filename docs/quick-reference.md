@@ -4,7 +4,7 @@
 **Audience**: New hires, contractors, senior engineers\
 **Goal**: Immediate understanding of layers, boundaries, and invariants\
 
-For full architectural details, see [FinanceForge Backend Architecture](architecture.md)
+For full architectural details, see [FinanceForge Backend Architecture](ARCHITECTURE)
 
 
 ---
