@@ -19,7 +19,10 @@ public class Account {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "account_type", nullable = false)
-    private AccountType accountType;
+    private AccountType type;
+
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true; // defaulting new accounts to active
 
     @Column(name = "description", length = 500)
     private String description;
@@ -50,11 +53,13 @@ public class Account {
     public Account() {
     }
 
-    public Account(String accountName, AccountType accountType,
+    public Account(String accountName, AccountType type,
+                   boolean active,
                    String description, BigDecimal startingBalance,
                    BigDecimal currentBalance) {
         this.accountName = accountName;
-        this.accountType = accountType;
+        this.type = type;
+        this.active = active;
         this.description = description;
         this.startingBalance = startingBalance;
         this.currentBalance = currentBalance;
@@ -77,12 +82,20 @@ public class Account {
         this.accountName = accountName;
     }
 
-    public AccountType getAccountType() {
-        return accountType;
+    public AccountType getType() {
+        return type;
     }
 
-    public void setAccountType(AccountType accountType) {
-        this.accountType = accountType;
+    public void setType(AccountType type) {
+        this.type = type;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
     public String getDescription() {
@@ -140,13 +153,14 @@ public class Account {
 
     @Override
     public String toString() {
-        return "Account {" +
-            "\nid=" + id +
-            ", \naccountName='" + accountName + '\'' +
-            ", \naccountType=" + accountType +
-            ", \ndescription='" + description + '\'' +
-            ", \nstartingBalance=" + startingBalance +
-            ", \ncurrentBalance=" + currentBalance +
-            "\n}";
+        return "Account{" +
+            "id=" + id +
+            ", accountName='" + accountName + '\'' +
+            ", type=" + type +
+            ", active=" + active +
+            ", description='" + description + '\'' +
+            ", startingBalance=" + startingBalance +
+            ", currentBalance=" + currentBalance +
+            '}';
     }
 }

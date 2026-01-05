@@ -17,7 +17,7 @@ public class Transaction {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "transaction_type", nullable = false)
-    private TransactionType transactionType;
+    private TransactionType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "source_account_id", nullable = false)
@@ -64,7 +64,7 @@ public class Transaction {
     }
 
     public Transaction(
-        TransactionType transactionType,
+        TransactionType type,
         Account sourceAccount,
         Account destinationAccount,
         BudgetCategory category,
@@ -72,7 +72,7 @@ public class Transaction {
         String currency,
         LocalDate transactionDate
     ) {
-        this.transactionType = transactionType;
+        this.type = type;
         this.sourceAccount = sourceAccount;
         this.destinationAccount = destinationAccount;
         this.category = category;
@@ -91,12 +91,12 @@ public class Transaction {
         this.id = id;
     }
 
-    public TransactionType getTransactionType() {
-        return transactionType;
+    public TransactionType getType() {
+        return type;
     }
 
-    public void setTransactionType(TransactionType transactionType) {
-        this.transactionType = transactionType;
+    public void setType(TransactionType type) {
+        this.type = type;
     }
 
     public Account getSourceAccount() {
@@ -188,7 +188,7 @@ public class Transaction {
     public String toString() {
         return "Transaction{" +
             "id=" + id +
-            ", transactionType=" + transactionType +
+            ", type=" + type +
             ", sourceAccountId=" + (sourceAccount != null ? sourceAccount.getId() : null) +
             ", destinationAccountId=" + (destinationAccount != null ? destinationAccount.getId() : null) +
             ", budgetCategory=" + category +
