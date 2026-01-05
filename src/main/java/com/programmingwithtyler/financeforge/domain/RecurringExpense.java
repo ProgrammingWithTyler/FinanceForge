@@ -11,13 +11,14 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 @Entity
-@Table(name = "recurring_transactions")
+@Table(name = "recurring_expenses")
 public class RecurringExpense {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Column(name = "frequency", nullable = false)
     @Enumerated(EnumType.STRING)
     private TransactionFrequency frequency;
@@ -39,9 +40,8 @@ public class RecurringExpense {
     @Column(name = "budget_category", nullable = false)
     private BudgetCategory category;
 
-    @Column(name = "status", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private RecurringStatus status;
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
@@ -75,7 +75,7 @@ public class RecurringExpense {
                             BigDecimal amount,
                             BudgetCategory category,
                             String description,
-                            RecurringStatus status,
+                            boolean active,
                             Account sourceAccount,
                             LocalDate lastGeneratedDate) {
         this.frequency = frequency;
@@ -83,7 +83,7 @@ public class RecurringExpense {
         this.amount = amount;
         this.category = category;
         this.description = description;
-        this.status = status;
+        this.active = active;
         this.sourceAccount = sourceAccount;
         this.lastGeneratedDate = lastGeneratedDate; // can be null until first generated
     }
@@ -93,9 +93,9 @@ public class RecurringExpense {
                             BigDecimal amount,
                             BudgetCategory category,
                             String description,
-                            RecurringStatus status,
+                            boolean active,
                             Account sourceAccount) {
-        this(frequency, nextScheduledDate, amount, category, description, status, sourceAccount, null);
+        this(frequency, nextScheduledDate, amount, category, description, active, sourceAccount, null);
     }
 
     // No-args constructor for JPA
@@ -119,8 +119,14 @@ public class RecurringExpense {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
-    public RecurringStatus getStatus() { return status; }
-    public void setStatus(RecurringStatus status) { this.status = status; }
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
 
     public Account getSourceAccount() { return sourceAccount; }
     public void setSourceAccount(Account sourceAccount) { this.sourceAccount = sourceAccount; }
@@ -154,7 +160,7 @@ public class RecurringExpense {
             ", amount=" + amount +
             ", category=" + category +
             ", description='" + description + '\'' +
-            ", status=" + status +
+            ", active=" + active +
             ", sourceAccountId=" + (sourceAccount != null ? sourceAccount.getId() : null) +
             ", lastGeneratedDate=" + lastGeneratedDate +
             ", createdAt=" + createdAt +
