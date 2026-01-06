@@ -99,7 +99,7 @@ public class RecurringExpense {
     }
 
     // No-args constructor for JPA
-    public RecurringExpense() {}
+    protected RecurringExpense() {}
 
     // ===== Getters & Setters =====
     public Long getId() { return id; }

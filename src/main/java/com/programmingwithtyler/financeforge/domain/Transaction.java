@@ -60,7 +60,7 @@ public class Transaction {
         updatedAt = LocalDateTime.now();
     }
 
-    public Transaction() {
+    protected Transaction() {
     }
 
     public Transaction(
