@@ -50,7 +50,7 @@ public class Account {
         updatedAt = LocalDateTime.now();
     }
 
-    public Account() {
+    protected Account() {
     }
 
     public Account(String accountName, AccountType type,

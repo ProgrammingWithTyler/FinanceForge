@@ -1,6 +1,8 @@
 package com.programmingwithtyler.financeforge.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -15,15 +17,20 @@ public class Budget {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @Enumerated(EnumType.STRING)
     @Column(name = "category", nullable = false)
     private BudgetCategory category;
 
-    @Column(name = "monthly_amount", precision = 19, scale = 4, nullable = false)
+    @Column(name = "is_active", nullable = false)
+    private boolean active = true;
+
+    @Positive
+    @Column(name = "monthly_amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal monthlyAllocationAmount;
 
     @Column(name = "current_spent_amount", nullable = false, precision = 19, scale = 4)
-    private BigDecimal currentSpentAmount;
+    private BigDecimal currentSpentAmount = BigDecimal.ZERO;
 
     @Column(name = "period_start", nullable = false)
     private LocalDate periodStart;
@@ -37,6 +44,7 @@ public class Budget {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    // ===== JPA Lifecycle Callbacks =====
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -48,36 +56,58 @@ public class Budget {
         updatedAt = LocalDateTime.now();
     }
 
-    public Budget() {
+    // ===== Constructors =====
+    protected Budget() {
     }
 
-    public Budget(Long id, BudgetCategory category, BigDecimal monthlyAllocationAmount,
-                  BigDecimal currentSpentAmount, LocalDate periodStart, LocalDate periodEnd, LocalDateTime createdAt,
-                  LocalDateTime updatedAt) {
-        this.id = id;
+    public Budget(BudgetCategory category, BigDecimal monthlyAllocationAmount,
+                  LocalDate periodStart, LocalDate periodEnd) {
         this.category = category;
         this.monthlyAllocationAmount = monthlyAllocationAmount;
-        this.currentSpentAmount = currentSpentAmount;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
-        this.createdAt = createdAt;
-        this.updatedAt = updatedAt;
     }
 
+    // ===== Domain Behavior Methods =====
+    public void spend(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+        if (currentSpentAmount.add(amount).compareTo(monthlyAllocationAmount) > 0) {
+            throw new IllegalStateException("Budget exceeded for category: " + category);
+        }
+        currentSpentAmount = currentSpentAmount.add(amount);
+    }
+
+    public void resetPeriod(LocalDate newStart, LocalDate newEnd) {
+        this.currentSpentAmount = BigDecimal.ZERO;
+        this.periodStart = newStart;
+        this.periodEnd = newEnd;
+    }
+
+    public void deactivate() {
+        this.active = false;
+    }
+
+    public void activate() {
+        this.active = true;
+    }
+
+    // ===== Getters (No public setters for id/timestamps/currentSpentAmount) =====
     public Long getId() {
         return id;
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public BudgetCategory getBudgetCategory() {
+    public BudgetCategory getCategory() {
         return category;
     }
 
-    public void setBudgetCategory(BudgetCategory budgetCategory) {
-        this.category = budgetCategory;
+    public void setCategory(BudgetCategory category) {
+        this.category = category;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 
     public BigDecimal getMonthlyAllocationAmount() {
@@ -90,10 +120,6 @@ public class Budget {
 
     public BigDecimal getCurrentSpentAmount() {
         return currentSpentAmount;
-    }
-
-    public void setCurrentSpentAmount(BigDecimal currentSpentAmount) {
-        this.currentSpentAmount = currentSpentAmount;
     }
 
     public LocalDate getPeriodStart() {
@@ -116,22 +142,15 @@ public class Budget {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
 
-    public void setUpdatedAt(LocalDateTime updatedAt) {
-        this.updatedAt = updatedAt;
-    }
-
+    // ===== equals & hashCode based on ID =====
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (!(o instanceof Budget)) return false;
         Budget budget = (Budget) o;
         return Objects.equals(id, budget.id);
     }
@@ -141,17 +160,19 @@ public class Budget {
         return Objects.hash(id);
     }
 
+    // ===== toString =====
     @Override
     public String toString() {
-        return "Budget {" +
-            "\nid=" + id +
-            ", \nbudgetCategory=" + category +
-            ", \nmonthlyAllocationAmount=" + monthlyAllocationAmount +
-            ", \ncurrentSpentAmount=" + currentSpentAmount +
-            ", \nperiodStart=" + periodStart +
-            ", \nperiodEnd=" + periodEnd +
-            ", \ncreatedAt=" + createdAt +
-            ", \nupdatedAt=" + updatedAt +
-            "\n}";
+        return "Budget{" +
+            "id=" + id +
+            ", category=" + category +
+            ", active=" + active +
+            ", monthlyAllocationAmount=" + monthlyAllocationAmount +
+            ", currentSpentAmount=" + currentSpentAmount +
+            ", periodStart=" + periodStart +
+            ", periodEnd=" + periodEnd +
+            ", createdAt=" + createdAt +
+            ", updatedAt=" + updatedAt +
+            '}';
     }
 }
