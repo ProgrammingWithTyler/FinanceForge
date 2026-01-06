@@ -169,7 +169,7 @@ This is a solo-developer portfolio project. External contributions are not curre
 
 ## License
 
-[MIT License / Apache 2.0 / Your preferred license]
+This project is licensed under the BSD 3-Clause License - see the LICENSE file for details.
 
 ## Contact
 
