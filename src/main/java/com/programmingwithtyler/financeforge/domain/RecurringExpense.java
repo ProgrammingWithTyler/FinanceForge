@@ -122,11 +122,9 @@ public class RecurringExpense {
     public boolean isActive() {
         return active;
     }
-
     public void setActive(boolean active) {
         this.active = active;
     }
-
 
     public Account getSourceAccount() { return sourceAccount; }
     public void setSourceAccount(Account sourceAccount) { this.sourceAccount = sourceAccount; }
