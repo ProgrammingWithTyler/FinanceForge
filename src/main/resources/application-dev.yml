@@ -1,6 +1,6 @@
 spring:
   application:
-    name: financeforge
+    name: financeforge-dev
 
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5433}/${POSTGRES_DB:financeforge_dev}
@@ -8,16 +8,16 @@ spring:
     password: ${POSTGRES_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
+      maximum-pool-size: 5
+      minimum-idle: 1
       idle-timeout: 300000
       max-lifetime: 1800000
       connection-timeout: 30000
-      pool-name: FinanceForgeHikariCP
+      pool-name: FinanceForgeHikariCP-Dev
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: true
     properties:
       hibernate:
@@ -40,7 +40,7 @@ server:
 
 logging:
   level:
-    root: INFO
+    root: DEBUG
     com.programmingwithtyler.financeforge: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %logger{36} - %msg%n"
