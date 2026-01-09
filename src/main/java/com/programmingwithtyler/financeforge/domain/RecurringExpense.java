@@ -19,7 +19,7 @@ public class RecurringExpense {
     private Long id;
 
     @NotNull
-    @Column(name = "frequency", nullable = false)
+    @Column(name = "frequency", nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     private TransactionFrequency frequency;
 
@@ -32,12 +32,12 @@ public class RecurringExpense {
     private BigDecimal amount;
 
     @NotBlank
-    @Column(name = "description", nullable = false)
+    @Column(name = "description", nullable = false, length = 255)
     private String description;
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "budget_category", nullable = false)
+    @Column(name = "budget_category", nullable = false, length = 50)
     private BudgetCategory category;
 
     @Column(name = "is_active", nullable = false)
