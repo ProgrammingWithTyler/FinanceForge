@@ -14,17 +14,17 @@ public class Account {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "account_name", nullable = false)
+    @Column(name = "account_name", nullable = false, length = 100)
     private String accountName;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "account_type", nullable = false)
+    @Column(name = "account_type", nullable = false, length = 50)
     private AccountType type;
 
     @Column(name = "is_active", nullable = false)
     private boolean active = true; // defaulting new accounts to active
 
-    @Column(name = "description", length = 500)
+    @Column(name = "description", length = 255)
     private String description;
 
     @Column(name = "start_balance", nullable = false, precision = 19, scale = 4)

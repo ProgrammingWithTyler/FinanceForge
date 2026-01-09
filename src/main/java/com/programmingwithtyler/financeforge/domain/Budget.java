@@ -19,7 +19,7 @@ public class Budget {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false)
+    @Column(name = "category", nullable = false, length = 50)
     private BudgetCategory category;
 
     @Column(name = "is_active", nullable = false)

@@ -16,7 +16,7 @@ public class Transaction {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "transaction_type", nullable = false)
+    @Column(name = "transaction_type", nullable = false, length = 50)
     private TransactionType type;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -28,7 +28,7 @@ public class Transaction {
     private Account destinationAccount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "budget_category", nullable = false)
+    @Column(name = "budget_category", nullable = false, length = 50)
     private BudgetCategory category;
 
     @Column(name = "transaction_date", nullable = false)
@@ -37,7 +37,7 @@ public class Transaction {
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
-    @Column(name = "currency", length = 3, nullable = false)
+    @Column(name = "currency", nullable = false, columnDefinition = "CHAR(3)")
     private String currency = "USD";
 
     @Column(name = "is_deleted", nullable = false)
