@@ -9,4 +9,5 @@ import java.util.List;
 public interface AccountRepository extends JpaRepository<Account, Long> {
   List<Account> findByType(AccountType type);
   List<Account> findByActive(boolean active);
+  boolean existsByAccountName(String accountName);
 }
