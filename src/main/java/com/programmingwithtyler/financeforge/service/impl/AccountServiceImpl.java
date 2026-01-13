@@ -85,6 +85,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal getBalance(Long accountId) {
 
         Account account = accountRepository.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account " +
@@ -144,6 +145,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Account> listAccounts(AccountFilter filter) {
         List<Account> allAccounts = accountRepository.findAll();
 
@@ -158,6 +160,7 @@ public class AccountServiceImpl implements AccountService {
 
 
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal sumBalancesBelowThreshold(BigDecimal threshold) {
 
         if (threshold == null) {
@@ -175,6 +178,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public BigDecimal calculateTotalBalance() {
         return accountRepository.findAll().stream()
             .filter(Account::isActive)
