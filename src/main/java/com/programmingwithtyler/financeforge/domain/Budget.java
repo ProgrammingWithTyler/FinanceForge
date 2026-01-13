@@ -110,6 +110,10 @@ public class Budget {
         return active;
     }
 
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
     public BigDecimal getMonthlyAllocationAmount() {
         return monthlyAllocationAmount;
     }
@@ -120,6 +124,10 @@ public class Budget {
 
     public BigDecimal getCurrentSpentAmount() {
         return currentSpentAmount;
+    }
+
+    public void setCurrentSpentAmount(BigDecimal currentSpentAmount) {
+        this.currentSpentAmount = currentSpentAmount;
     }
 
     public LocalDate getPeriodStart() {
