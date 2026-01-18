@@ -2,187 +2,257 @@ package com.programmingwithtyler.financeforge.service.impl;
 
 import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.AccountType;
-import com.programmingwithtyler.financeforge.domain.BalanceAdjustType;
-import com.programmingwithtyler.financeforge.domain.TransactionType;
 import com.programmingwithtyler.financeforge.repository.AccountRepository;
+import com.programmingwithtyler.financeforge.repository.TransactionRepository;
 import com.programmingwithtyler.financeforge.service.AccountFilter;
 import com.programmingwithtyler.financeforge.service.AccountService;
+import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.DuplicateAccountNameException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
+/**
+ * Implementation of AccountService interface.
+ *
+ * <p>Manages account lifecycle, balance inquiries, and reporting calculations
+ * with full transactional integrity.</p>
+ *
+ * <p>All public methods are transactional with read-write by default.
+ * Read-only methods are explicitly marked with @Transactional(readOnly = true)
+ * for performance optimization.</p>
+ */
 @Service
 @Transactional
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
 
-    public AccountServiceImpl(AccountRepository accountRepository) {
+    public AccountServiceImpl(
+        AccountRepository accountRepository,
+        TransactionRepository transactionRepository
+    ) {
         this.accountRepository = accountRepository;
+        this.transactionRepository = transactionRepository;
     }
 
+    // ========================================================================
+    // Account Lifecycle
+    // ========================================================================
+
     @Override
-    public Account createAccount(String name, AccountType type, BigDecimal startingBalance, String description) {
+    public Account createAccount(
+        String name,
+        AccountType type,
+        BigDecimal startingBalance,
+        String description
+    ) {
+        // Validate inputs
+        validateAccountName(name);
+        validateAccountType(type);
+        validateStartingBalance(startingBalance, type);
 
-        Account account;
-
-        if (name == null || name.isBlank()) {
-            throw new IllegalArgumentException("Name must not be null");
-        }
-
-        if (type == null) {
-            throw new IllegalArgumentException("Account type must not be null");
-        }
-
-        if (startingBalance.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Starting balance must not be negative");
-        }
-
+        // Check for duplicate name
         if (accountRepository.existsByAccountName(name)) {
-            throw new IllegalArgumentException("Account name must be unique");
+            throw new DuplicateAccountNameException(name);
         }
 
-        account = new Account(name, type, true, description, startingBalance, startingBalance);
-        accountRepository.save(account);
-        return account;
+        // Create and persist account
+        Account account = new Account();
+        account.setAccountName(name);
+        account.setType(type);
+        account.setStartingBalance(startingBalance);
+        account.setCurrentBalance(startingBalance); // Initialize with starting balance
+        account.setDescription(description);
+        account.setActive(true);
+
+        return accountRepository.save(account);
     }
 
     @Override
-    public Account updateAccount(Long accountId, String name, String description, Boolean status, AccountType type) {
+    public Account updateAccount(
+        Long accountId,
+        String name,
+        String description,
+        Boolean isActive,
+        AccountType type
+    ) {
+        Account account = getAccount(accountId);
 
-        Account updating = accountRepository.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account does not " +
-            "exist"));
-
-        if (type == null) {
-            throw new IllegalArgumentException("Account type must not be null");
-        }
-
-        updating.setType(type);
-
-        if (name != null && !name.isBlank()) {
-            boolean nameTaken = accountRepository.existsByAccountName(name) && !name.equals(updating.getAccountName());
-
-            if (nameTaken) {
-                throw new IllegalArgumentException("Account name is already taken");
+        // Update name if provided and validate uniqueness
+        if (name != null && !name.equals(account.getAccountName())) {
+            validateAccountName(name);
+            if (accountRepository.existsByAccountName(name)) {
+                throw new DuplicateAccountNameException(name);
             }
-                updating.setAccountName(name);
+            account.setAccountName(name);
         }
 
-        if (description != null && !description.isBlank()) {
-            updating.setDescription(description);
+        // Update description if provided
+        if (description != null) {
+            account.setDescription(description);
         }
 
-        if (status != null) {
-            updating.setActive(status);
+        // Update active status if provided
+        if (isActive != null) {
+            // Prevent reactivating closed accounts with transaction history
+            if (isActive && !account.isActive()) {
+                boolean hasTransactions = transactionRepository.existsByAccountId(accountId);
+                if (hasTransactions) {
+                    throw new IllegalArgumentException(
+                        "Cannot reactivate account with transaction history. " +
+                            "Create a new account instead."
+                    );
+                }
+            }
+            account.setActive(isActive);
         }
 
-        accountRepository.save(updating);
-        return updating;
+        // Update type if provided
+        if (type != null) {
+            account.setType(type);
+        }
+
+        return accountRepository.save(account);
+    }
+
+    @Override
+    public boolean closeAccount(Long accountId) {
+        Account account = getAccount(accountId);
+
+        // Already inactive
+        if (!account.isActive()) {
+            return false;
+        }
+
+        // Check for transaction history
+        boolean hasTransactions = transactionRepository.existsByAccountId(accountId);
+
+        if (hasTransactions) {
+            // Soft delete: mark inactive
+            account.setActive(false);
+            accountRepository.save(account);
+        } else {
+            // Hard delete: no history to preserve
+            accountRepository.delete(account);
+        }
+
+        return true;
+    }
+
+    // ========================================================================
+    // Account Queries
+    // ========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Account getAccount(Long accountId) {
+        return accountRepository.findById(accountId)
+            .orElseThrow(() -> new AccountNotFoundException(accountId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal getBalance(Long accountId) {
-
-        Account account = accountRepository.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account " +
-            "does not exist"));
-
+        Account account = getAccount(accountId);
         return account.getCurrentBalance();
-    }
-
-    @Override
-    public Account adjustBalance(Long accountId, BigDecimal amount, BalanceAdjustType adjustType) {
-
-        Account account = accountRepository.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account " +
-            "does not exist"));
-
-        if (amount == null) {
-            throw new IllegalArgumentException("Amount must not be null");
-        }
-
-        if (amount.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Amount must be greater than zero");
-        }
-
-        if (adjustType == null) {
-            throw new IllegalArgumentException("Type must not be null");
-        }
-
-        if (adjustType == BalanceAdjustType.DEPOSIT) {
-            BigDecimal newBalance = account.getCurrentBalance().add(amount);
-            account.setCurrentBalance(newBalance);
-        } else if (adjustType == BalanceAdjustType.WITHDRAWAL) {
-            if (amount.compareTo(account.getCurrentBalance()) > 0) {
-                throw new IllegalArgumentException("Insufficient balance for withdrawal");
-            }
-            BigDecimal newBalance = account.getCurrentBalance().subtract(amount);
-            account.setCurrentBalance(newBalance);
-        }
-
-        accountRepository.save(account);
-        return account;
-    }
-
-    @Override
-    public boolean closeAccount(Long accountId) {
-
-        Account account = accountRepository.findById(accountId).orElseThrow(() -> new IllegalArgumentException("Account " +
-            "does not exist"));
-
-        if (!account.isActive()) {
-            return false;
-        }
-
-        // TODO: validate no pending/uncleared transactions once TransactionService exists
-
-        account.setActive(false);
-        accountRepository.save(account);
-        return true;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Account> listAccounts(AccountFilter filter) {
-        List<Account> allAccounts = accountRepository.findAll();
-
-        return allAccounts.stream()
-            .filter(a -> filter.getActive() == null || a.isActive() == filter.getActive())
-            .filter(a -> filter.getType() == null || a.getType() == filter.getType())
-            .filter(a -> filter.getMinBalance() == null || a.getCurrentBalance().compareTo(filter.getMinBalance()) >= 0)
-            .filter(a -> filter.getMaxBalance() == null || a.getCurrentBalance().compareTo(filter.getMaxBalance()) <= 0)
-            .filter(a -> filter.getNameContains() == null || a.getAccountName().contains(filter.getNameContains()))
-            .toList();
-    }
-
-
-    @Override
-    @Transactional(readOnly = true)
-    public BigDecimal sumBalancesBelowThreshold(BigDecimal threshold) {
-
-        if (threshold == null) {
-            throw new IllegalArgumentException("Threshold must not be null");
+        if (filter == null) {
+            // No filter: return all accounts ordered by name
+            return accountRepository.findAllByOrderByAccountNameAsc();
         }
 
-        if (threshold.compareTo(BigDecimal.ZERO) < 0) {
-            throw new IllegalArgumentException("Amount must be greater than zero");
+        // Build query based on filter criteria
+        // This is a simplified implementation - production would use Specifications
+        if (filter.isActive() != null && filter.type() != null) {
+            return accountRepository.findByActiveAndTypeOrderByAccountNameAsc(
+                filter.isActive(),
+                filter.type()
+            );
+        } else if (filter.isActive() != null) {
+            return accountRepository.findByActiveOrderByAccountNameAsc(filter.isActive());
+        } else if (filter.type() != null) {
+            return accountRepository.findByTypeOrderByAccountNameAsc(filter.type());
         }
 
-        return accountRepository.findAll().stream()
-            .filter(a -> a.isActive() && a.getCurrentBalance().compareTo(threshold) < 0)
-            .map(Account::getCurrentBalance)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return accountRepository.findAllByOrderByAccountNameAsc();
     }
+
+    // ========================================================================
+    // Account Reporting & Analytics
+    // ========================================================================
 
     @Override
     @Transactional(readOnly = true)
     public BigDecimal calculateTotalBalance() {
-        return accountRepository.findAll().stream()
-            .filter(Account::isActive)
-            .map(Account::getCurrentBalance)
-            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        return accountRepository.sumBalancesByActive(true)
+            .orElse(BigDecimal.ZERO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal calculateTotalBalanceByType(AccountType type) {
+        if (type == null) {
+            throw new IllegalArgumentException("Account type cannot be null");
+        }
+
+        return accountRepository.sumBalancesByActiveAndType(true, type)
+            .orElse(BigDecimal.ZERO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal sumBalancesBelowThreshold(BigDecimal threshold) {
+        if (threshold == null || threshold.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Threshold must be non-negative");
+        }
+
+        return accountRepository.sumBalancesBelowThreshold(threshold)
+            .orElse(BigDecimal.ZERO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal calculateNetChange(Long accountId) {
+        Account account = getAccount(accountId);
+        // Calculate: currentBalance - startingBalance
+        return account.getCurrentBalance().subtract(account.getStartingBalance());
+    }
+
+    // ========================================================================
+    // Validation Helpers
+    // ========================================================================
+
+    private void validateAccountName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Account name cannot be blank");
+        }
+    }
+
+    private void validateAccountType(AccountType type) {
+        if (type == null) {
+            throw new IllegalArgumentException("Account type cannot be null");
+        }
+    }
+
+    private void validateStartingBalance(BigDecimal balance, AccountType type) {
+        if (balance == null) {
+            throw new IllegalArgumentException("Starting balance cannot be null");
+        }
+
+        // Most account types require non-negative starting balance
+        // Credit cards can have negative balance (representing debt)
+        if (type != AccountType.CREDIT_CARD && balance.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException(
+                "Starting balance must be non-negative for " + type + " accounts"
+            );
+        }
     }
 }
