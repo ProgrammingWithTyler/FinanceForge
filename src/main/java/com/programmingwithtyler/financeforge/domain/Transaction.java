@@ -19,13 +19,23 @@ public class Transaction {
     @Column(name = "transaction_type", nullable = false, length = 50)
     private TransactionType type;
 
+    @Column(name = "description", length = 500)
+    private String description;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "source_account_id", nullable = false)
+    @JoinColumn(name = "source_account_id")
     private Account sourceAccount;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destination_account_id")
     private Account destinationAccount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "recurring_expense_id")
+    private Long recurringExpenseId;
+
+    @Column(name = "is_recurring", nullable = false)
+    private boolean isRecurring = false;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "budget_category", nullable = false, length = 50)
@@ -82,6 +92,145 @@ public class Transaction {
         this.isDeleted = false;
     }
 
+    /**
+     * Create an income transaction (credits destination account).
+     *
+     * @param destination the account receiving the income
+     * @param amount the income amount (must be positive)
+     * @param description transaction description
+     * @return a new income Transaction
+     */
+    public static Transaction income(Account destination, BigDecimal amount, String description) {
+        if (destination == null) {
+            throw new IllegalArgumentException("Destination account cannot be null for income");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+
+        Transaction tx = new Transaction(
+            TransactionType.INCOME,
+            null,                    // No source account for income
+            destination,
+            null,                    // No budget category for income
+            amount,
+            "USD",
+            LocalDate.now()
+        );
+        tx.setDescription(description);
+        return tx;
+    }
+
+    /**
+     * Create an expense transaction (debits source account, tracks against budget).
+     *
+     * @param source the account being debited
+     * @param amount the expense amount (must be positive)
+     * @param category the budget category (required)
+     * @param description transaction description
+     * @return a new expense Transaction
+     */
+    public static Transaction expense(Account source, BigDecimal amount,
+                                      BudgetCategory category, String description) {
+        if (source == null) {
+            throw new IllegalArgumentException("Source account cannot be null for expense");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+        if (category == null) {
+            throw new IllegalArgumentException("Budget category is required for expenses");
+        }
+
+        Transaction tx = new Transaction(
+            TransactionType.EXPENSE,
+            source,
+            null,                    // No destination account for expense
+            category,
+            amount,
+            "USD",
+            LocalDate.now()
+        );
+        tx.setDescription(description);
+        return tx;
+    }
+
+    /**
+     * Create a transfer transaction (debits source, credits destination).
+     *
+     * @param source the account being debited
+     * @param destination the account being credited
+     * @param amount the transfer amount (must be positive)
+     * @param description transaction description
+     * @return a new transfer Transaction
+     */
+    public static Transaction transfer(Account source, Account destination,
+                                       BigDecimal amount, String description) {
+        if (source == null) {
+            throw new IllegalArgumentException("Source account cannot be null for transfer");
+        }
+        if (destination == null) {
+            throw new IllegalArgumentException("Destination account cannot be null for transfer");
+        }
+        if (source.getId().equals(destination.getId())) {
+            throw new IllegalArgumentException("Source and destination accounts must be different");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+
+        Transaction tx = new Transaction(
+            TransactionType.TRANSFER,
+            source,
+            destination,
+            null,                    // No budget category for transfers
+            amount,
+            "USD",
+            LocalDate.now()
+        );
+        tx.setDescription(description);
+        return tx;
+    }
+
+    /**
+     * Create a refund transaction (credits source account, may reverse budget).
+     *
+     * @param source the account being credited (account that originally paid)
+     * @param amount the refund amount (must be positive)
+     * @param category the budget category (optional)
+     * @param description transaction description
+     * @return a new refund Transaction
+     */
+    public static Transaction refund(Account source, BigDecimal amount,
+                                     BudgetCategory category, String description) {
+        if (source == null) {
+            throw new IllegalArgumentException("Source account cannot be null for refund");
+        }
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+
+        Transaction tx = new Transaction(
+            TransactionType.REFUND,
+            source,
+            null,                    // No destination account for refund
+            category,                // Optional: may be null
+            amount,
+            "USD",
+            LocalDate.now()
+        );
+        tx.setDescription(description);
+        return tx;
+    }
+
+    /**
+     * Check if this is a transfer transaction.
+     *
+     * @return true if both source and destination accounts are present
+     */
+    public boolean isTransfer() {
+        return sourceAccount != null && destinationAccount != null;
+    }
 
     public Long getId() {
         return id;
@@ -99,6 +248,14 @@ public class Transaction {
         this.type = type;
     }
 
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     public Account getSourceAccount() {
         return sourceAccount;
     }
@@ -113,6 +270,22 @@ public class Transaction {
 
     public void setDestinationAccount(Account destinationAccount) {
         this.destinationAccount = destinationAccount;
+    }
+
+    public Long getRecurringExpenseId() {
+        return recurringExpenseId;
+    }
+
+    public void setRecurringExpenseId(Long recurringExpenseId) {
+        this.recurringExpenseId = recurringExpenseId;
+    }
+
+    public boolean isRecurring() {
+        return isRecurring;
+    }
+
+    public void setRecurring(boolean recurring) {
+        isRecurring = recurring;
     }
 
     public BudgetCategory getBudgetCategory() {
