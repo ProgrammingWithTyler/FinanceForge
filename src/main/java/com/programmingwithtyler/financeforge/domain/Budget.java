@@ -19,7 +19,7 @@ public class Budget {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false, length = 50)
+    @Column(name = "budget_category", nullable = false, length = 50)
     private BudgetCategory category;
 
     @Column(name = "is_active", nullable = false)
@@ -28,9 +28,6 @@ public class Budget {
     @Positive
     @Column(name = "monthly_amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal monthlyAllocationAmount;
-
-    @Column(name = "current_spent_amount", nullable = false, precision = 19, scale = 4)
-    private BigDecimal currentSpentAmount = BigDecimal.ZERO;
 
     @Column(name = "period_start", nullable = false)
     private LocalDate periodStart;
@@ -57,7 +54,7 @@ public class Budget {
     }
 
     // ===== Constructors =====
-    protected Budget() {
+    public Budget() {
     }
 
     public Budget(BudgetCategory category, BigDecimal monthlyAllocationAmount,
@@ -69,18 +66,7 @@ public class Budget {
     }
 
     // ===== Domain Behavior Methods =====
-    public void spend(BigDecimal amount) {
-        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
-        }
-        if (currentSpentAmount.add(amount).compareTo(monthlyAllocationAmount) > 0) {
-            throw new IllegalStateException("Budget exceeded for category: " + category);
-        }
-        currentSpentAmount = currentSpentAmount.add(amount);
-    }
-
     public void resetPeriod(LocalDate newStart, LocalDate newEnd) {
-        this.currentSpentAmount = BigDecimal.ZERO;
         this.periodStart = newStart;
         this.periodEnd = newEnd;
     }
@@ -120,14 +106,6 @@ public class Budget {
 
     public void setMonthlyAllocationAmount(BigDecimal monthlyAllocationAmount) {
         this.monthlyAllocationAmount = monthlyAllocationAmount;
-    }
-
-    public BigDecimal getCurrentSpentAmount() {
-        return currentSpentAmount;
-    }
-
-    public void setCurrentSpentAmount(BigDecimal currentSpentAmount) {
-        this.currentSpentAmount = currentSpentAmount;
     }
 
     public LocalDate getPeriodStart() {
@@ -176,11 +154,13 @@ public class Budget {
             ", category=" + category +
             ", active=" + active +
             ", monthlyAllocationAmount=" + monthlyAllocationAmount +
-            ", currentSpentAmount=" + currentSpentAmount +
             ", periodStart=" + periodStart +
             ", periodEnd=" + periodEnd +
             ", createdAt=" + createdAt +
             ", updatedAt=" + updatedAt +
             '}';
     }
+
+    // ===== Domain Behavior =====
+
 }
