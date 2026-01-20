@@ -50,7 +50,7 @@ public class Account {
         updatedAt = LocalDateTime.now();
     }
 
-    protected Account() {
+    public Account() {
     }
 
     public Account(String accountName, AccountType type,
@@ -65,6 +65,48 @@ public class Account {
         this.currentBalance = currentBalance;
     }
 
+    // ===== Domain Behavior Methods =====
+    /**
+     * Debit (subtract from) the account balance.
+     *
+     * @param amount the amount to debit (must be positive)
+     * @throws IllegalArgumentException if amount is not positive
+     */
+    public void debit(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Debit amount must be positive");
+        }
+        this.currentBalance = this.currentBalance.subtract(amount);
+    }
+
+    /**
+     * Credit (add to) the account balance.
+     *
+     * @param amount the amount to credit (must be positive)
+     * @throws IllegalArgumentException if amount is not positive
+     */
+    public void credit(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Credit amount must be positive");
+        }
+        this.currentBalance = this.currentBalance.add(amount);
+    }
+
+    /**
+     * Close this account (mark as inactive).
+     */
+    public void close() {
+        this.active = false;
+    }
+
+    /**
+     * Calculate the net change since account creation.
+     *
+     * @return current balance minus starting balance
+     */
+    public BigDecimal getNetChange() {
+        return this.currentBalance.subtract(this.startingBalance);
+    }
 
     public Long getId() {
         return id;
