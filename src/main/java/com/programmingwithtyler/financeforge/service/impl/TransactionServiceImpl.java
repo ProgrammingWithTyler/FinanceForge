@@ -51,12 +51,16 @@ public class TransactionServiceImpl implements TransactionService {
             command.amount(),
             command.description()
         );
-        tx.setTransactionDate(command.transactionDate());
 
-        // 3. Update account balance
+        // 3. Update transaction date if different from today
+        if (command.transactionDate() != null && !command.transactionDate().equals(LocalDate.now())) {
+            tx.updateDetails(command.amount(), command.transactionDate(), command.description());
+        }
+
+        // 4. Update account balance using domain method
         destination.credit(command.amount());
 
-        // 4. Persist both entities atomically
+        // 5. Persist both entities atomically
         transactionRepository.save(tx);
         accountRepository.save(destination);
 
@@ -75,7 +79,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         // 2. Check sufficient funds (unless credit card account)
         if (source.getType() != AccountType.CREDIT_CARD) {
-            if (source.getCurrentBalance().compareTo(command.amount()) < 0) {
+            if (!source.hasSufficientBalance(command.amount())) {
                 throw new InsufficientFundsException(
                     source.getId(),
                     source.getCurrentBalance(),
@@ -91,12 +95,16 @@ public class TransactionServiceImpl implements TransactionService {
             command.category(),
             command.description()
         );
-        tx.setTransactionDate(command.transactionDate());
 
-        // 4. Update account balance
+        // 4. Update transaction date if different from today
+        if (command.transactionDate() != null && !command.transactionDate().equals(LocalDate.now())) {
+            tx.updateDetails(command.amount(), command.transactionDate(), command.description());
+        }
+
+        // 5. Update account balance using domain method
         source.debit(command.amount());
 
-        // 5. Persist transaction and account atomically
+        // 6. Persist transaction and account atomically
         transactionRepository.save(tx);
         accountRepository.save(source);
 
@@ -122,14 +130,14 @@ public class TransactionServiceImpl implements TransactionService {
             throw new InactiveAccountException(destination.getId());
         }
 
-        // 2. Validate accounts are different (enforced in command, but double-check)
+        // 2. Validate accounts are different (enforced in domain model)
         if (source.getId().equals(destination.getId())) {
             throw new IllegalArgumentException("Source and destination accounts must be different");
         }
 
         // 3. Check sufficient funds (unless credit card)
         if (source.getType() != AccountType.CREDIT_CARD) {
-            if (source.getCurrentBalance().compareTo(command.amount()) < 0) {
+            if (!source.hasSufficientBalance(command.amount())) {
                 throw new InsufficientFundsException(
                     source.getId(),
                     source.getCurrentBalance(),
@@ -145,13 +153,17 @@ public class TransactionServiceImpl implements TransactionService {
             command.amount(),
             command.description()
         );
-        tx.setTransactionDate(command.transactionDate());
 
-        // 5. Update both account balances atomically
+        // 5. Update transaction date if different from today
+        if (command.transactionDate() != null && !command.transactionDate().equals(LocalDate.now())) {
+            tx.updateDetails(command.amount(), command.transactionDate(), command.description());
+        }
+
+        // 6. Update both account balances atomically using domain methods
         source.debit(command.amount());
         destination.credit(command.amount());
 
-        // 6. Persist all entities atomically
+        // 7. Persist all entities atomically
         transactionRepository.save(tx);
         accountRepository.save(source);
         accountRepository.save(destination);
@@ -176,12 +188,16 @@ public class TransactionServiceImpl implements TransactionService {
             command.category(),  // May be null
             command.description()
         );
-        tx.setTransactionDate(command.transactionDate());
 
-        // 3. Update account balance (refund credits the account)
+        // 3. Update transaction date if different from today
+        if (command.transactionDate() != null && !command.transactionDate().equals(LocalDate.now())) {
+            tx.updateDetails(command.amount(), command.transactionDate(), command.description());
+        }
+
+        // 4. Update account balance using domain method (refund credits the account)
         source.credit(command.amount());
 
-        // 4. Persist both entities atomically
+        // 5. Persist both entities atomically
         transactionRepository.save(tx);
         accountRepository.save(source);
 
@@ -206,29 +222,33 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction tx = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new TransactionNotFoundException(transactionId));
 
-        // 2. Update only non-null fields
-        if (newDate != null) {
-            if (newDate.isAfter(LocalDate.now())) {
-                throw new IllegalArgumentException("Transaction date cannot be in the future");
-            }
-            tx.setTransactionDate(newDate);
+        // 2. Validate future dates
+        if (newDate != null && newDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Transaction date cannot be in the future");
         }
 
+        // 3. Validate category changes
         if (newCategory != null) {
-            // Only EXPENSE and REFUND can have categories
             if (tx.getType() != TransactionType.EXPENSE && tx.getType() != TransactionType.REFUND) {
                 throw new IllegalArgumentException(
                     "Budget category can only be updated for EXPENSE and REFUND transactions"
                 );
             }
+        }
+
+        // 4. Update using domain method
+        LocalDate dateToUse = newDate != null ? newDate : tx.getTransactionDate();
+        String descToUse = newDescription != null ? newDescription : tx.getDescription();
+
+        tx.updateDetails(tx.getAmount(), dateToUse, descToUse);
+
+        // 5. Update category separately if provided (no domain method for this)
+        if (newCategory != null) {
+            // Uses protected setter - ideally add updateCategory() domain method
             tx.setBudgetCategory(newCategory);
         }
 
-        if (newDescription != null) {
-            tx.setDescription(newDescription);
-        }
-
-        // 3. Persist updated transaction
+        // 6. Persist updated transaction
         return transactionRepository.save(tx);
     }
 
@@ -242,8 +262,8 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction tx = transactionRepository.findById(transactionId)
             .orElseThrow(() -> new TransactionNotFoundException(transactionId));
 
-        // 2. Soft delete (mark as deleted, preserve data)
-        tx.setDeleted(true);
+        // 2. Soft delete using domain method
+        tx.delete();
 
         // 3. Persist
         transactionRepository.save(tx);
@@ -257,6 +277,7 @@ public class TransactionServiceImpl implements TransactionService {
     // ========================================================================
 
     @Override
+    @Transactional(readOnly = true)
     public Transaction getTransaction(Long transactionId) {
         return transactionRepository.findById(transactionId)
             .orElseThrow(() -> new TransactionNotFoundException(transactionId));
@@ -317,6 +338,7 @@ public class TransactionServiceImpl implements TransactionService {
                     BudgetCategory.MISCELLANEOUS,  // No budget impact for reversals
                     reversalDescription
                 );
+                reversal.updateDetails(original.getAmount(), reversalDate, reversalDescription);
                 original.getDestinationAccount().debit(original.getAmount());
             }
             case EXPENSE -> {
@@ -327,6 +349,7 @@ public class TransactionServiceImpl implements TransactionService {
                     original.getBudgetCategory(),  // Reverse budget impact
                     reversalDescription
                 );
+                reversal.updateDetails(original.getAmount(), reversalDate, reversalDescription);
                 original.getSourceAccount().credit(original.getAmount());
             }
             case TRANSFER -> {
@@ -337,6 +360,7 @@ public class TransactionServiceImpl implements TransactionService {
                     original.getAmount(),
                     reversalDescription
                 );
+                reversal.updateDetails(original.getAmount(), reversalDate, reversalDescription);
                 original.getDestinationAccount().debit(original.getAmount());
                 original.getSourceAccount().credit(original.getAmount());
             }
@@ -350,13 +374,13 @@ public class TransactionServiceImpl implements TransactionService {
                         : BudgetCategory.MISCELLANEOUS,
                     reversalDescription
                 );
+                reversal.updateDetails(original.getAmount(), reversalDate, reversalDescription);
                 original.getSourceAccount().debit(original.getAmount());
             }
             default -> throw new IllegalStateException("Unknown transaction type: " + original.getType());
         }
 
-        // 4. Set reversal date and persist
-        reversal.setTransactionDate(reversalDate);
+        // 4. Persist reversal transaction
         transactionRepository.save(reversal);
 
         // 5. Update account balances (already done above in switch)

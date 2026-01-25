@@ -60,14 +60,8 @@ public class AccountServiceImpl implements AccountService {
             throw new DuplicateAccountNameException(name);
         }
 
-        // Create and persist account
-        Account account = new Account();
-        account.setAccountName(name);
-        account.setType(type);
-        account.setStartingBalance(startingBalance);
-        account.setCurrentBalance(startingBalance); // Initialize with starting balance
-        account.setDescription(description);
-        account.setActive(true);
+        // Create account using domain constructor
+        Account account = new Account(name, type, description, startingBalance);
 
         return accountRepository.save(account);
     }
@@ -88,18 +82,18 @@ public class AccountServiceImpl implements AccountService {
             if (accountRepository.existsByAccountName(name)) {
                 throw new DuplicateAccountNameException(name);
             }
-            account.setAccountName(name);
+            account.rename(name);
         }
 
         // Update description if provided
         if (description != null) {
-            account.setDescription(description);
+            account.updateDescription(description);
         }
 
         // Update active status if provided
         if (isActive != null) {
-            // Prevent reactivating closed accounts with transaction history
             if (isActive && !account.isActive()) {
+                // Reactivating a closed account
                 boolean hasTransactions = transactionRepository.existsByAccountId(accountId);
                 if (hasTransactions) {
                     throw new IllegalArgumentException(
@@ -107,12 +101,24 @@ public class AccountServiceImpl implements AccountService {
                             "Create a new account instead."
                     );
                 }
+                account.reopen();
+            } else if (!isActive && account.isActive()) {
+                // Closing an active account
+                account.close();
             }
-            account.setActive(isActive);
         }
 
-        // Update type if provided
-        if (type != null) {
+        // Update type if provided (uses protected setter since no domain method exists)
+        if (type != null && type != account.getType()) {
+            // This is a structural change - validate it's safe
+            boolean hasTransactions = transactionRepository.existsByAccountId(accountId);
+            if (hasTransactions) {
+                throw new IllegalArgumentException(
+                    "Cannot change account type for accounts with transaction history"
+                );
+            }
+            // Direct field access via protected setter - normally you'd add a domain method
+            // For now, we'll keep this as-is since it's a rare operation
             account.setType(type);
         }
 
@@ -132,8 +138,8 @@ public class AccountServiceImpl implements AccountService {
         boolean hasTransactions = transactionRepository.existsByAccountId(accountId);
 
         if (hasTransactions) {
-            // Soft delete: mark inactive
-            account.setActive(false);
+            // Soft delete: mark inactive using domain method
+            account.close();
             accountRepository.save(account);
         } else {
             // Hard delete: no history to preserve
@@ -222,8 +228,8 @@ public class AccountServiceImpl implements AccountService {
     @Transactional(readOnly = true)
     public BigDecimal calculateNetChange(Long accountId) {
         Account account = getAccount(accountId);
-        // Calculate: currentBalance - startingBalance
-        return account.getCurrentBalance().subtract(account.getStartingBalance());
+        // Use domain method instead of manual calculation
+        return account.getNetChange();
     }
 
     // ========================================================================

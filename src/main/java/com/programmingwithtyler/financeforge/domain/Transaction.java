@@ -30,16 +30,15 @@ public class Transaction {
     @JoinColumn(name = "destination_account_id")
     private Account destinationAccount;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "recurring_expense_id")
+    @Column(name = "recurring_expense_id")
     private Long recurringExpenseId;
 
     @Column(name = "is_recurring", nullable = false)
     private boolean isRecurring = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "budget_category", nullable = false, length = 50)
-    private BudgetCategory category;
+    @Column(name = "budget_category", length = 50)
+    private BudgetCategory budgetCategory;
 
     @Column(name = "transaction_date", nullable = false)
     private LocalDate transactionDate;
@@ -47,7 +46,7 @@ public class Transaction {
     @Column(name = "amount", nullable = false, precision = 19, scale = 4)
     private BigDecimal amount;
 
-    @Column(name = "currency", nullable = false, columnDefinition = "CHAR(3)")
+    @Column(name = "currency", nullable = false, length = 3)
     private String currency = "USD";
 
     @Column(name = "is_deleted", nullable = false)
@@ -63,21 +62,23 @@ public class Transaction {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+        validateInvariants();
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+        validateInvariants();
     }
 
     protected Transaction() {
     }
 
-    public Transaction(
+    private Transaction(
         TransactionType type,
         Account sourceAccount,
         Account destinationAccount,
-        BudgetCategory category,
+        BudgetCategory budgetCategory,
         BigDecimal amount,
         String currency,
         LocalDate transactionDate
@@ -85,9 +86,9 @@ public class Transaction {
         this.type = type;
         this.sourceAccount = sourceAccount;
         this.destinationAccount = destinationAccount;
-        this.category = category;
+        this.budgetCategory = budgetCategory;
         this.amount = amount;
-        this.currency = currency != null ? currency : "USD";
+        this.currency = currency;
         this.transactionDate = transactionDate;
         this.isDeleted = false;
     }
@@ -104,20 +105,18 @@ public class Transaction {
         if (destination == null) {
             throw new IllegalArgumentException("Destination account cannot be null for income");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
-        }
+        validatePositiveAmount(amount);
 
         Transaction tx = new Transaction(
             TransactionType.INCOME,
-            null,                    // No source account for income
+            null,
             destination,
-            null,                    // No budget category for income
+            null,
             amount,
             "USD",
             LocalDate.now()
         );
-        tx.setDescription(description);
+        tx.description = description;
         return tx;
     }
 
@@ -135,23 +134,21 @@ public class Transaction {
         if (source == null) {
             throw new IllegalArgumentException("Source account cannot be null for expense");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
-        }
         if (category == null) {
             throw new IllegalArgumentException("Budget category is required for expenses");
         }
+        validatePositiveAmount(amount);
 
         Transaction tx = new Transaction(
             TransactionType.EXPENSE,
             source,
-            null,                    // No destination account for expense
+            null,
             category,
             amount,
             "USD",
             LocalDate.now()
         );
-        tx.setDescription(description);
+        tx.description = description;
         return tx;
     }
 
@@ -172,23 +169,21 @@ public class Transaction {
         if (destination == null) {
             throw new IllegalArgumentException("Destination account cannot be null for transfer");
         }
-        if (source.getId().equals(destination.getId())) {
+        if (source.getId() != null && source.getId().equals(destination.getId())) {
             throw new IllegalArgumentException("Source and destination accounts must be different");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
-        }
+        validatePositiveAmount(amount);
 
         Transaction tx = new Transaction(
             TransactionType.TRANSFER,
             source,
             destination,
-            null,                    // No budget category for transfers
+            null,
             amount,
             "USD",
             LocalDate.now()
         );
-        tx.setDescription(description);
+        tx.description = description;
         return tx;
     }
 
@@ -206,138 +201,225 @@ public class Transaction {
         if (source == null) {
             throw new IllegalArgumentException("Source account cannot be null for refund");
         }
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Amount must be positive");
-        }
+        validatePositiveAmount(amount);
 
         Transaction tx = new Transaction(
             TransactionType.REFUND,
             source,
-            null,                    // No destination account for refund
-            category,                // Optional: may be null
+            null,
+            category,
             amount,
             "USD",
             LocalDate.now()
         );
-        tx.setDescription(description);
+        tx.description = description;
         return tx;
     }
 
     /**
+     * Mark transaction as linked to a recurring expense.
+     */
+    public void markAsRecurring(Long recurringExpenseId) {
+        if (recurringExpenseId == null) {
+            throw new IllegalArgumentException("Recurring expense ID cannot be null");
+        }
+        this.recurringExpenseId = recurringExpenseId;
+        this.isRecurring = true;
+    }
+
+    /**
+     * Soft delete this transaction.
+     */
+    public void delete() {
+        this.isDeleted = true;
+    }
+
+    /**
+     * Restore a soft-deleted transaction.
+     */
+    public void restore() {
+        this.isDeleted = false;
+    }
+
+    /**
+     * Update transaction details (amount, date, description).
+     * Use carefully - changing amount may require recalculating account balances.
+     */
+    public void updateDetails(BigDecimal newAmount, LocalDate newDate, String newDescription) {
+        validatePositiveAmount(newAmount);
+        if (newDate == null) {
+            throw new IllegalArgumentException("Transaction date cannot be null");
+        }
+        this.amount = newAmount;
+        this.transactionDate = newDate;
+        this.description = newDescription;
+    }
+
+    /**
      * Check if this is a transfer transaction.
-     *
-     * @return true if both source and destination accounts are present
      */
     public boolean isTransfer() {
-        return sourceAccount != null && destinationAccount != null;
+        return type == TransactionType.TRANSFER;
     }
+
+    /**
+     * Check if this transaction affects a budget category.
+     */
+    public boolean affectsBudget() {
+        return budgetCategory != null;
+    }
+
+    // ===== Validation =====
+
+    private static void validatePositiveAmount(BigDecimal amount) {
+        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("Amount must be positive");
+        }
+    }
+
+    private void validateInvariants() {
+        // Validate transaction type rules
+        switch (type) {
+            case INCOME:
+                if (destinationAccount == null) {
+                    throw new IllegalStateException("Income transaction must have a destination account");
+                }
+                if (sourceAccount != null) {
+                    throw new IllegalStateException("Income transaction should not have a source account");
+                }
+                break;
+            case EXPENSE:
+                if (sourceAccount == null) {
+                    throw new IllegalStateException("Expense transaction must have a source account");
+                }
+                if (budgetCategory == null) {
+                    throw new IllegalStateException("Expense transaction must have a budget category");
+                }
+                break;
+            case TRANSFER:
+                if (sourceAccount == null || destinationAccount == null) {
+                    throw new IllegalStateException("Transfer transaction must have both source and destination accounts");
+                }
+                break;
+            case REFUND:
+                if (sourceAccount == null) {
+                    throw new IllegalStateException("Refund transaction must have a source account");
+                }
+                break;
+        }
+    }
+
+    // ===== Getters (Limited Setters) =====
 
     public Long getId() {
         return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
     }
 
     public TransactionType getType() {
         return type;
     }
 
-    public void setType(TransactionType type) {
-        this.type = type;
-    }
-
     public String getDescription() {
         return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public Account getSourceAccount() {
         return sourceAccount;
     }
 
-    public void setSourceAccount(Account sourceAccount) {
-        this.sourceAccount = sourceAccount;
-    }
-
     public Account getDestinationAccount() {
         return destinationAccount;
-    }
-
-    public void setDestinationAccount(Account destinationAccount) {
-        this.destinationAccount = destinationAccount;
     }
 
     public Long getRecurringExpenseId() {
         return recurringExpenseId;
     }
 
-    public void setRecurringExpenseId(Long recurringExpenseId) {
-        this.recurringExpenseId = recurringExpenseId;
-    }
-
     public boolean isRecurring() {
         return isRecurring;
     }
 
-    public void setRecurring(boolean recurring) {
-        isRecurring = recurring;
-    }
-
     public BudgetCategory getBudgetCategory() {
-        return category;
-    }
-
-    public void setBudgetCategory(BudgetCategory budgetCategory) {
-        this.category = budgetCategory;
+        return budgetCategory;
     }
 
     public LocalDate getTransactionDate() {
         return transactionDate;
     }
 
-    public void setTransactionDate(LocalDate transactionDate) {
-        this.transactionDate = transactionDate;
-    }
-
     public BigDecimal getAmount() {
         return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
     }
 
     public String getCurrency() {
         return currency;
     }
 
-    public void setCurrency(String currency) {
-        this.currency = currency;
-    }
-
     public boolean isDeleted() {
         return isDeleted;
-    }
-
-    public void setDeleted(boolean deleted) {
-        isDeleted = deleted;
     }
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    // ===== Protected setters for JPA/framework use only =====
+
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public void setType(TransactionType type) {
+        this.type = type;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setSourceAccount(Account sourceAccount) {
+        this.sourceAccount = sourceAccount;
+    }
+
+    public void setDestinationAccount(Account destinationAccount) {
+        this.destinationAccount = destinationAccount;
+    }
+
+    public void setRecurringExpenseId(Long recurringExpenseId) {
+        this.recurringExpenseId = recurringExpenseId;
+    }
+
+    public void setRecurring(boolean recurring) {
+        isRecurring = recurring;
+    }
+
+    public void setBudgetCategory(BudgetCategory budgetCategory) {
+        this.budgetCategory = budgetCategory;
+    }
+
+    public void setTransactionDate(LocalDate transactionDate) {
+        this.transactionDate = transactionDate;
+    }
+
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
@@ -364,10 +446,11 @@ public class Transaction {
             ", type=" + type +
             ", sourceAccountId=" + (sourceAccount != null ? sourceAccount.getId() : null) +
             ", destinationAccountId=" + (destinationAccount != null ? destinationAccount.getId() : null) +
-            ", budgetCategory=" + category +
+            ", budgetCategory=" + budgetCategory +
             ", transactionDate=" + transactionDate +
             ", amount=" + amount +
             ", currency='" + currency + '\'' +
+            ", isDeleted=" + isDeleted +
             '}';
     }
 }

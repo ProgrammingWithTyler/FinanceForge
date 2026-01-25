@@ -19,7 +19,7 @@ public class Budget {
 
     @NotNull
     @Enumerated(EnumType.STRING)
-    @Column(name = "budget_category", nullable = false, length = 50)
+    @Column(name = "category", nullable = false, length = 50)
     private BudgetCategory category;
 
     @Column(name = "is_active", nullable = false)
@@ -160,7 +160,4 @@ public class Budget {
             ", updatedAt=" + updatedAt +
             '}';
     }
-
-    // ===== Domain Behavior =====
-
 }
