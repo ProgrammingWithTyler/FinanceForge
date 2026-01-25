@@ -2,6 +2,8 @@ package com.programmingwithtyler.financeforge.service;
 
 import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.AccountType;
+import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.DuplicateAccountNameException;
 
 import java.math.BigDecimal;
 import java.util.List;

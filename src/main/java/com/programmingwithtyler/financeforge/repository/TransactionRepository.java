@@ -39,8 +39,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         SELECT SUM(t.amount)
         FROM Transaction t
         WHERE t.budgetCategory = :category
-          AND t.date BETWEEN :start AND :end
+          AND t.transactionDate BETWEEN :start AND :end
           AND t.type = 'EXPENSE'
+          AND t.isDeleted = false
         """)
     Optional<BigDecimal> sumByCategoryAndPeriod(
         @Param("category") BudgetCategory category,
@@ -54,8 +55,9 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     @Query("""
         SELECT t FROM Transaction t
         WHERE (t.sourceAccount.id = :accountId OR t.destinationAccount.id = :accountId)
-          AND t.date BETWEEN :start AND :end
-        ORDER BY t.date DESC
+          AND t.transactionDate BETWEEN :start AND :end
+          AND t.isDeleted = false
+        ORDER BY t.transactionDate DESC, t.id DESC
         """)
     List<Transaction> findByAccountIdAndDateBetween(
         @Param("accountId") Long accountId,
@@ -71,7 +73,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         SELECT CASE WHEN COUNT(t) > 0 THEN true ELSE false END
         FROM Transaction t
         WHERE t.recurringExpenseId = :recurringExpenseId
-          AND t.date = :date
+          AND t.transactionDate = :date
+          AND t.isDeleted = false
         """)
     boolean existsByRecurringExpenseAndDate(
         @Param("recurringExpenseId") Long recurringExpenseId,
@@ -93,7 +96,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         WHERE t.isDeleted = false
           AND (:startDate IS NULL OR t.transactionDate >= :startDate)
           AND (:endDate IS NULL OR t.transactionDate <= :endDate)
-          AND (:category IS NULL OR t.category = :category)
+          AND (:category IS NULL OR t.budgetCategory = :category)
           AND (:accountId IS NULL OR t.sourceAccount.id = :accountId OR t.destinationAccount.id = :accountId)
           AND (:type IS NULL OR t.type = :type)
         ORDER BY t.transactionDate DESC, t.id DESC
@@ -117,6 +120,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         FROM Transaction t
         WHERE t.description LIKE CONCAT('%Original: ', :originalId, '%')
           AND t.description LIKE 'REVERSAL:%'
+          AND t.isDeleted = false
         """)
     boolean existsReversalFor(@Param("originalId") Long originalTransactionId);
 }
