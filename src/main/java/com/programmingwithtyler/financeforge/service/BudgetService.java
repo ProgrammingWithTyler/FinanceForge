@@ -2,6 +2,8 @@ package com.programmingwithtyler.financeforge.service;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
+import com.programmingwithtyler.financeforge.dto.BudgetResponse;
+import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse;
 import com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException;
 import com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException;
 
@@ -103,20 +105,13 @@ public interface BudgetService {
     /**
      * List budgets with optional filtering.
      *
-     * <p>All filter parameters are optional (null = no filter applied).</p>
+     * <p>Filters by category, active status, and/or period dates.
+     * All filter fields are optional (null = no filter applied).</p>
      *
-     * @param category filter by budget category (optional)
-     * @param isActive filter by active status (optional, true = active only, false = inactive only)
-     * @param periodStart filter budgets starting on or after this date (optional)
-     * @param periodEnd filter budgets ending on or before this date (optional)
-     * @return a list of budgets matching the filters, ordered by period start descending
+     * @param filter filtering criteria (category, isActive, periodStart, periodEnd)
+     * @return list of budgets matching the filters, ordered by period start descending
      */
-    List<Budget> listBudgets(
-        BudgetCategory category,
-        Boolean isActive,
-        LocalDate periodStart,
-        LocalDate periodEnd
-    );
+    List<Budget> listBudgets(BudgetFilter filter);
 
     /**
      * Find the active budget for a given category and date.
@@ -172,6 +167,40 @@ public interface BudgetService {
      * @throws ArithmeticException if allocated amount is zero
      */
     BigDecimal calculateUtilization(Long budgetId);
+
+    // ========================================================================
+    // DTO Conversion & Response Building
+    // ========================================================================
+
+    /**
+     * Build a complete budget response with all calculated fields.
+     *
+     * <p>This method retrieves the budget entity and enriches it with
+     * calculated spending, remaining, and utilization data.</p>
+     *
+     * @param budgetId the ID of the budget
+     * @return a BudgetResponse with all fields populated
+     * @throws BudgetNotFoundException if budget does not exist
+     */
+    BudgetResponse getBudgetResponse(Long budgetId);
+
+    /**
+     * Build a detailed utilization response for a budget.
+     *
+     * <p>Calculates spending metrics and determines utilization status:
+     * <ul>
+     *   <li>ON_TRACK: utilization &lt; 80%</li>
+     *   <li>WARNING: utilization between 80-100%</li>
+     *   <li>OVER_BUDGET: utilization &gt; 100%</li>
+     * </ul>
+     * </p>
+     *
+     * @param budgetId the ID of the budget
+     * @return a BudgetUtilizationResponse with status indicator
+     * @throws BudgetNotFoundException if budget does not exist
+     * @throws ArithmeticException if allocated amount is zero
+     */
+    BudgetUtilizationResponse getBudgetUtilization(Long budgetId);
 
     // ========================================================================
     // Budget Reporting & Analytics
@@ -243,4 +272,28 @@ public interface BudgetService {
         LocalDate newPeriodStart,
         LocalDate newPeriodEnd
     );
+
+    /**
+     * Find all active budgets that overlap with the given period.
+     *
+     * <p>Returns budgets where the budget's period (periodStart to periodEnd)
+     * overlaps with the specified date range. A budget overlaps if its period
+     * intersects with the query period in any way.</p>
+     *
+     * <p>Example: For period 2026-02-01 to 2026-02-28, this returns:
+     * <ul>
+     *   <li>Budgets that start and end within February</li>
+     *   <li>Budgets that start before February but end during February</li>
+     *   <li>Budgets that start during February but end after</li>
+     *   <li>Budgets that span across the entire February period</li>
+     * </ul>
+     * </p>
+     *
+     * @param periodStart the start date of the period to query (inclusive)
+     * @param periodEnd the end date of the period to query (inclusive)
+     * @return list of active budgets overlapping the period, empty list if none found
+     * @throws IllegalArgumentException if periodStart or periodEnd is null
+     * @throws IllegalArgumentException if periodEnd is before periodStart
+     */
+    List<Budget> findBudgetsForPeriod(LocalDate periodStart, LocalDate periodEnd);
 }
