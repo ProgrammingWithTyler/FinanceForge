@@ -2,8 +2,12 @@ package com.programmingwithtyler.financeforge.service.impl;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
+import com.programmingwithtyler.financeforge.dto.BudgetResponse;
+import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse;
+import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse.UtilizationStatus;
 import com.programmingwithtyler.financeforge.repository.BudgetRepository;
 import com.programmingwithtyler.financeforge.repository.TransactionRepository;
+import com.programmingwithtyler.financeforge.service.BudgetFilter;
 import com.programmingwithtyler.financeforge.service.BudgetService;
 import com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException;
 import com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException;
@@ -166,20 +170,17 @@ public class BudgetServiceImpl implements BudgetService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Budget> listBudgets(
-        BudgetCategory category,
-        Boolean isActive,
-        LocalDate periodStart,
-        LocalDate periodEnd
-    ) {
-        // Build query based on provided filters
-        // This is a simplified implementation - production would use Specifications
+    public List<Budget> listBudgets(BudgetFilter filter) {
+        if (filter == null) {
+            return budgetRepository.findAllByOrderByPeriodStartDesc();
+        }
 
+        BudgetCategory category = filter.category();
+        Boolean isActive = filter.isActive();
+
+        // Simplified filtering (periodStart/periodEnd not used in current query methods)
         if (category != null && isActive != null) {
-            return budgetRepository.findByCategoryAndActiveOrderByPeriodStartDesc(
-                category,
-                isActive
-            );
+            return budgetRepository.findByCategoryAndActiveOrderByPeriodStartDesc(category, isActive);
         } else if (category != null) {
             return budgetRepository.findByCategoryOrderByPeriodStartDesc(category);
         } else if (isActive != null) {
@@ -248,6 +249,62 @@ public class BudgetServiceImpl implements BudgetService {
     }
 
     // ========================================================================
+    // DTO Conversion & Response Building
+    // ========================================================================
+
+    @Override
+    @Transactional(readOnly = true)
+    public BudgetResponse getBudgetResponse(Long budgetId) {
+        Budget budget = getBudget(budgetId);
+
+        BigDecimal spent = calculateSpent(budgetId);
+        BigDecimal remaining = calculateRemaining(budgetId);
+        BigDecimal utilization = calculateUtilization(budgetId);
+
+        return new BudgetResponse(
+            budget.getId(),
+            budget.getCategory(),
+            budget.getMonthlyAllocationAmount(),
+            budget.getPeriodStart(),
+            budget.getPeriodEnd(),
+            budget.isActive(),
+            spent,
+            remaining,
+            utilization
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BudgetUtilizationResponse getBudgetUtilization(Long budgetId) {
+        Budget budget = getBudget(budgetId);
+
+        BigDecimal spent = calculateSpent(budgetId);
+        BigDecimal remaining = calculateRemaining(budgetId);
+        BigDecimal utilization = calculateUtilization(budgetId);
+
+        // Determine status based on utilization percentage
+        UtilizationStatus status;
+        if (utilization.compareTo(new BigDecimal("80.00")) < 0) {
+            status = UtilizationStatus.ON_TRACK;
+        } else if (utilization.compareTo(new BigDecimal("100.00")) <= 0) {
+            status = UtilizationStatus.WARNING;
+        } else {
+            status = UtilizationStatus.OVER_BUDGET;
+        }
+
+        return new BudgetUtilizationResponse(
+            budget.getId(),
+            budget.getCategory(),
+            budget.getMonthlyAllocationAmount(),
+            spent,
+            remaining,
+            utilization,
+            status
+        );
+    }
+
+    // ========================================================================
     // Budget Reporting & Analytics
     // ========================================================================
 
@@ -270,7 +327,6 @@ public class BudgetServiceImpl implements BudgetService {
                 }
             } catch (ArithmeticException e) {
                 // Skip budgets with zero allocation
-                continue;
             }
         }
 
@@ -395,7 +451,6 @@ public class BudgetServiceImpl implements BudgetService {
 
         return newBudgets;
     }
-
     // ========================================================================
     // Validation Helpers
     // ========================================================================
@@ -451,5 +506,13 @@ public class BudgetServiceImpl implements BudgetService {
         // Exclude the budget being updated
         return overlapping.stream()
             .anyMatch(b -> !b.getId().equals(excludeBudgetId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Budget> findBudgetsForPeriod(LocalDate periodStart, LocalDate periodEnd) {
+        validatePeriod(periodStart, periodEnd);
+
+        return budgetRepository.findByActiveAndPeriodOverlap(true, periodStart, periodEnd);
     }
 }

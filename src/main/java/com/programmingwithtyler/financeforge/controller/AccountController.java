@@ -86,9 +86,10 @@ public class AccountController {
      * @throws com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException if account not found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long id) {
+    public ResponseEntity<AccountResponse> getAccountById(
+        @PathVariable Long id
+    ) {
         Account account = accountService.getAccount(id);
-        System.out.println(account);
         return ResponseEntity.ok(AccountResponse.from(account));
     }
 
@@ -129,7 +130,9 @@ public class AccountController {
      * @return 204 No Content if successful, 404 if already closed or not found
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteAccount(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAccount(
+        @PathVariable Long id
+    ) {
         boolean closed = accountService.closeAccount(id);
         if (!closed) {
             return ResponseEntity.notFound().build();
@@ -145,7 +148,9 @@ public class AccountController {
      * @throws com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException if account not found
      */
     @GetMapping("/{id}/balance")
-    public ResponseEntity<BalanceResponse> getAccountBalance(@PathVariable Long id) {
+    public ResponseEntity<BalanceResponse> getAccountBalance(
+        @PathVariable Long id
+    ) {
         Account account = accountService.getAccount(id);
         return ResponseEntity.ok(BalanceResponse.from(account));
     }
