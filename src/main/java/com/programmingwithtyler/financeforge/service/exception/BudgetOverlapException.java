@@ -12,6 +12,26 @@ public class BudgetOverlapException extends ServiceException {
     private final LocalDate periodStart;
     private final LocalDate periodEnd;
 
+    /**
+     * Creates exception with default message format.
+     */
+    public BudgetOverlapException(
+        BudgetCategory category,
+        LocalDate periodStart,
+        LocalDate periodEnd
+    ) {
+        super(String.format(
+            "Budget overlap detected for category %s in period %s to %s",
+            category, periodStart, periodEnd
+        ));
+        this.category = category;
+        this.periodStart = periodStart;
+        this.periodEnd = periodEnd;
+    }
+
+    /**
+     * Creates exception with custom message.
+     */
     public BudgetOverlapException(
         BudgetCategory category,
         LocalDate periodStart,
