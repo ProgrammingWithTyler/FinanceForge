@@ -174,7 +174,8 @@ public class AccountController {
             AccountType.CHECKING, accountService.calculateTotalBalanceByType(AccountType.CHECKING),
             AccountType.SAVINGS, accountService.calculateTotalBalanceByType(AccountType.SAVINGS),
             AccountType.CREDIT_CARD, accountService.calculateTotalBalanceByType(AccountType.CREDIT_CARD),
-            AccountType.INVESTMENT, accountService.calculateTotalBalanceByType(AccountType.INVESTMENT)
+            AccountType.INVESTMENT, accountService.calculateTotalBalanceByType(AccountType.INVESTMENT),
+            AccountType.CASH, accountService.calculateTotalBalanceByType(AccountType.CASH)
         );
 
         List<Account> allAccounts = accountService.listAccounts(
