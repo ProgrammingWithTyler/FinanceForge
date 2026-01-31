@@ -88,4 +88,20 @@ public interface BudgetRepository extends JpaRepository<Budget, Long> {
       @Param("start") LocalDate start,
       @Param("end") LocalDate end
   );
+
+  /**
+   * Find all budgets (active and inactive) that overlap with the specified period.
+   *
+   * A budget overlaps if:
+   * - Budget starts before or on period end AND
+   * - Budget ends on or after period start
+   *
+   * This is needed for generatePeriodSummary() to include both active and inactive budgets.
+   *
+   * @param start The start date of the period
+   * @param end The end date of the period
+   * @return List of budgets overlapping the period
+   */
+  @Query("SELECT b FROM Budget b WHERE b.periodStart <= :end AND b.periodEnd >= :start ORDER BY b.periodStart DESC")
+  List<Budget> findByPeriodOverlap(@Param("start") LocalDate start, @Param("end") LocalDate end);
 }
