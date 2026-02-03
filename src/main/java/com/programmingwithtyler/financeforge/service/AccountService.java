@@ -2,6 +2,7 @@ package com.programmingwithtyler.financeforge.service;
 
 import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.AccountType;
+import com.programmingwithtyler.financeforge.domain.Transaction;
 import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
 import com.programmingwithtyler.financeforge.service.exception.DuplicateAccountNameException;
 
@@ -19,7 +20,7 @@ import java.util.List;
  * to maintain ledger integrity.</p>
  *
  * @see TransactionService
- * @see com.programmingwithtyler.financeforge.domain.Transaction
+ * @see Transaction
  */
 public interface AccountService {
 

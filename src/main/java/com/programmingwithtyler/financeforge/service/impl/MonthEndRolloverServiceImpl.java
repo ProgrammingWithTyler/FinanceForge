@@ -1,7 +1,7 @@
 package com.programmingwithtyler.financeforge.service.impl;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
-import com.programmingwithtyler.financeforge.dto.PeriodSummary;
+import com.programmingwithtyler.financeforge.api.dto.PeriodSummary;
 import com.programmingwithtyler.financeforge.repository.BudgetRepository;
 import com.programmingwithtyler.financeforge.repository.TransactionRepository;
 import com.programmingwithtyler.financeforge.service.BudgetService;

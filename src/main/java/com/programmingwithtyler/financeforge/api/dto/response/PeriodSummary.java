@@ -1,4 +1,4 @@
-package com.programmingwithtyler.financeforge.dto;
+package com.programmingwithtyler.financeforge.api.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;

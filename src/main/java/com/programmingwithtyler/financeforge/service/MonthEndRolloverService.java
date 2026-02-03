@@ -1,7 +1,7 @@
 package com.programmingwithtyler.financeforge.service;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
-import com.programmingwithtyler.financeforge.dto.PeriodSummary;
+import com.programmingwithtyler.financeforge.api.dto.PeriodSummary;
 
 import java.util.List;
 

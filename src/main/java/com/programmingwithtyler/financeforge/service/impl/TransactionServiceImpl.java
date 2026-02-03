@@ -1,12 +1,17 @@
 package com.programmingwithtyler.financeforge.service.impl;
 
-import com.programmingwithtyler.financeforge.domain.*;
+import com.programmingwithtyler.financeforge.service.command.RecordExpenseCommand;
+import com.programmingwithtyler.financeforge.service.command.RecordIncomeCommand;
+import com.programmingwithtyler.financeforge.service.command.RecordRefundCommand;
+import com.programmingwithtyler.financeforge.service.command.RecordTransferCommand;
+import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.InactiveAccountException;
+import com.programmingwithtyler.financeforge.service.exception.InsufficientFundsException;
+import com.programmingwithtyler.financeforge.service.exception.TransactionNotFoundException;
 import com.programmingwithtyler.financeforge.repository.AccountRepository;
 import com.programmingwithtyler.financeforge.repository.TransactionRepository;
-import com.programmingwithtyler.financeforge.service.BudgetService;
 import com.programmingwithtyler.financeforge.service.TransactionService;
-import com.programmingwithtyler.financeforge.service.command.*;
-import com.programmingwithtyler.financeforge.service.exception.*;
+import com.programmingwithtyler.financeforge.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,16 +24,13 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
-    private final BudgetService budgetService;
 
     public TransactionServiceImpl(
         TransactionRepository transactionRepository,
-        AccountRepository accountRepository,
-        BudgetService budgetService
+        AccountRepository accountRepository
     ) {
         this.transactionRepository = transactionRepository;
         this.accountRepository = accountRepository;
-        this.budgetService = budgetService;
     }
 
     // ========================================================================

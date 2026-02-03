@@ -1,5 +1,6 @@
 package com.programmingwithtyler.financeforge.service;
 
+import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
 import com.programmingwithtyler.financeforge.domain.Transaction;
 import com.programmingwithtyler.financeforge.domain.TransactionType;
@@ -7,7 +8,10 @@ import com.programmingwithtyler.financeforge.service.command.RecordExpenseComman
 import com.programmingwithtyler.financeforge.service.command.RecordIncomeCommand;
 import com.programmingwithtyler.financeforge.service.command.RecordRefundCommand;
 import com.programmingwithtyler.financeforge.service.command.RecordTransferCommand;
-import com.programmingwithtyler.financeforge.service.exception.*;
+import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.InactiveAccountException;
+import com.programmingwithtyler.financeforge.service.exception.InsufficientFundsException;
+import com.programmingwithtyler.financeforge.service.exception.TransactionNotFoundException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -24,8 +28,8 @@ import java.util.List;
  * This follows the domain model's factory pattern and ensures type safety.</p>
  *
  * @see Transaction
- * @see com.programmingwithtyler.financeforge.domain.Account
- * @see com.programmingwithtyler.financeforge.service.BudgetService
+ * @see Account
+ * @see BudgetService
  */
 public interface TransactionService {
 

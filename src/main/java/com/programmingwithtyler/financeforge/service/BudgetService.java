@@ -2,8 +2,9 @@ package com.programmingwithtyler.financeforge.service;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
-import com.programmingwithtyler.financeforge.dto.BudgetResponse;
-import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse;
+import com.programmingwithtyler.financeforge.domain.Transaction;
+import com.programmingwithtyler.financeforge.api.dto.response.BudgetResponse;
+import com.programmingwithtyler.financeforge.api.dto.BudgetUtilizationResponse;
 import com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException;
 import com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException;
 import java.math.BigDecimal;
@@ -20,7 +21,7 @@ import java.util.List;
  * not stored in the Budget entity. This maintains a single source of truth and
  * prevents data inconsistency.</p>
  *
- * @see com.programmingwithtyler.financeforge.domain.Transaction
+ * @see Transaction
  * @see TransactionService
  */
 public interface BudgetService {

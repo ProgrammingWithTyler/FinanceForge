@@ -1,4 +1,4 @@
-package com.programmingwithtyler.financeforge.dto;
+package com.programmingwithtyler.financeforge.api.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
