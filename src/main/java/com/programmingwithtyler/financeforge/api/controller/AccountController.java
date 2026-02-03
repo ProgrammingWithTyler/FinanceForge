@@ -1,8 +1,15 @@
-package com.programmingwithtyler.financeforge.controller;
+package com.programmingwithtyler.financeforge.api.controller;
 
+import com.programmingwithtyler.financeforge.api.dto.*;
+import com.programmingwithtyler.financeforge.api.dto.response.AccountSummaryResponse;
+import com.programmingwithtyler.financeforge.api.dto.request.CreateAccountRequest;
+import com.programmingwithtyler.financeforge.api.dto.request.UpdateAccountRequest;
+import com.programmingwithtyler.financeforge.api.dto.response.AccountResponse;
+import com.programmingwithtyler.financeforge.api.dto.response.BalanceResponse;
+import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.DuplicateAccountNameException;
 import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.AccountType;
-import com.programmingwithtyler.financeforge.dto.*;
 import com.programmingwithtyler.financeforge.service.AccountFilter;
 import com.programmingwithtyler.financeforge.service.AccountService;
 import jakarta.validation.Valid;
@@ -83,7 +90,7 @@ public class AccountController {
      *
      * @param id account identifier
      * @return account details
-     * @throws com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException if account not found
+     * @throws AccountNotFoundException if account not found
      */
     @GetMapping("/{id}")
     public ResponseEntity<AccountResponse> getAccountById(
@@ -102,8 +109,8 @@ public class AccountController {
      * @param id account identifier
      * @param request update details
      * @return updated account
-     * @throws com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException if account not found
-     * @throws com.programmingwithtyler.financeforge.service.exception.DuplicateAccountNameException if name already exists
+     * @throws AccountNotFoundException if account not found
+     * @throws DuplicateAccountNameException if name already exists
      */
     @PutMapping("/{id}")
     public ResponseEntity<AccountResponse> updateAccount(
@@ -145,7 +152,7 @@ public class AccountController {
      *
      * @param id account identifier
      * @return current balance, starting balance, and net change
-     * @throws com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException if account not found
+     * @throws AccountNotFoundException if account not found
      */
     @GetMapping("/{id}/balance")
     public ResponseEntity<BalanceResponse> getAccountBalance(

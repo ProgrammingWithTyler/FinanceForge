@@ -1,4 +1,4 @@
-package com.programmingwithtyler.financeforge.dto;
+package com.programmingwithtyler.financeforge.api.dto.response;
 
 import com.programmingwithtyler.financeforge.domain.AccountType;
 

@@ -2,9 +2,9 @@ package com.programmingwithtyler.financeforge.service.impl;
 
 import com.programmingwithtyler.financeforge.domain.Budget;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
-import com.programmingwithtyler.financeforge.dto.BudgetResponse;
-import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse;
-import com.programmingwithtyler.financeforge.dto.BudgetUtilizationResponse.UtilizationStatus;
+import com.programmingwithtyler.financeforge.api.dto.response.BudgetResponse;
+import com.programmingwithtyler.financeforge.api.dto.BudgetUtilizationResponse;
+import com.programmingwithtyler.financeforge.api.dto.BudgetUtilizationResponse.UtilizationStatus;
 import com.programmingwithtyler.financeforge.repository.BudgetRepository;
 import com.programmingwithtyler.financeforge.repository.TransactionRepository;
 import com.programmingwithtyler.financeforge.service.BudgetFilter;

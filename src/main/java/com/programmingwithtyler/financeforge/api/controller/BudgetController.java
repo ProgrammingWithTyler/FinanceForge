@@ -1,8 +1,14 @@
-package com.programmingwithtyler.financeforge.controller;
+package com.programmingwithtyler.financeforge.api.controller;
 
+import com.programmingwithtyler.financeforge.api.dto.*;
+import com.programmingwithtyler.financeforge.api.dto.request.CreateBudgetRequest;
+import com.programmingwithtyler.financeforge.api.dto.request.RolloverRequest;
+import com.programmingwithtyler.financeforge.api.dto.request.UpdateBudgetRequest;
+import com.programmingwithtyler.financeforge.api.dto.response.BudgetResponse;
+import com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException;
+import com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException;
 import com.programmingwithtyler.financeforge.domain.Budget;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
-import com.programmingwithtyler.financeforge.dto.*;
 import com.programmingwithtyler.financeforge.service.BudgetFilter;
 import com.programmingwithtyler.financeforge.service.BudgetService;
 import jakarta.validation.Valid;
@@ -67,7 +73,7 @@ public class BudgetController {
      *
      * @param request the budget creation request
      * @return created budget with 201 status and Location header
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException
+     * @throws BudgetOverlapException
      *         if a budget already exists for the category and period
      */
     @PostMapping
@@ -92,7 +98,7 @@ public class BudgetController {
      *
      * @param id the budget ID
      * @return the budget with calculated spending metrics
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException
+     * @throws BudgetNotFoundException
      *         if budget does not exist
      */
     @GetMapping("/{id}")
@@ -111,9 +117,9 @@ public class BudgetController {
      * @param id the budget ID to update
      * @param request the update request
      * @return the updated budget with recalculated metrics
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException
+     * @throws BudgetNotFoundException
      *         if budget does not exist
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException
+     * @throws BudgetOverlapException
      *         if update would create an overlap
      */
     @PutMapping("/{id}")
@@ -204,7 +210,7 @@ public class BudgetController {
      *
      * @param id the budget ID
      * @return detailed utilization response with status indicator
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetNotFoundException
+     * @throws BudgetNotFoundException
      *         if budget does not exist
      */
     @GetMapping("/{id}/utilization")
@@ -239,7 +245,7 @@ public class BudgetController {
      *
      * @param request the rollover request with source and target periods
      * @return list of newly created budgets with 201 status
-     * @throws com.programmingwithtyler.financeforge.service.exception.BudgetOverlapException
+     * @throws BudgetOverlapException
      *         if any budget already exists in the target period
      * @throws IllegalArgumentException if target period is not after source period
      */

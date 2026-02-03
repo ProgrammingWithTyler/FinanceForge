@@ -8,6 +8,11 @@ spring:
       ddl-auto: create-drop
     show-sql: true
 
+# Match production configuration for consistent testing
+server:
+  servlet:
+    context-path: /api
+
 logging:
   level:
     root: INFO

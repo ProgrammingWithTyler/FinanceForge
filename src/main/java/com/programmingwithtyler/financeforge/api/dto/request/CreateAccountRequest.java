@@ -1,4 +1,4 @@
-package com.programmingwithtyler.financeforge.dto;
+package com.programmingwithtyler.financeforge.api.dto.request;
 
 import com.programmingwithtyler.financeforge.domain.AccountType;
 import jakarta.validation.constraints.DecimalMin;
