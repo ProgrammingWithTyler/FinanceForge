@@ -74,7 +74,7 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
         BigDecimal amount,
         BudgetCategory category,
         String description,
-        Account sourceAccount
+        Long sourceAccountId
     ) {
         // Validate all inputs
         validateFrequency(frequency);
@@ -82,12 +82,12 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
         validateAmount(amount);
         validateCategory(category);
         validateDescription(description);
-        validateSourceAccount(sourceAccount);
+        validateSourceAccountId(sourceAccountId);
 
-        // Verify source account exists and is active
-        Account account = accountService.getAccount(sourceAccount.getId());
-        if (!account.isActive()) {
-            throw new InactiveAccountException(account.getId());
+        // Retrieve and validate source account
+        Account sourceAccount = accountService.getAccount(sourceAccountId);
+        if (!sourceAccount.isActive()) {
+            throw new InactiveAccountException(sourceAccountId);
         }
 
         // Create recurring expense using domain constructor
@@ -98,13 +98,13 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
             category,
             description,
             true,  // active = true by default
-            account
+            sourceAccount
         );
 
         RecurringExpense saved = recurringExpenseRepository.save(recurringExpense);
 
-        logger.info("Created recurring expense: id={}, frequency={}, amount={}, category={}",
-            saved.getId(), frequency, amount, category);
+        logger.info("Created recurring expense: id={}, frequency={}, amount={}, category={}, sourceAccountId={}",
+            saved.getId(), frequency, amount, category, sourceAccountId);
 
         return saved;
     }
@@ -216,14 +216,13 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
         recurringExpense.setActive(false);
         recurringExpenseRepository.save(recurringExpense);
 
-        logger.info("Deactivated recurring expense: id={} (nextScheduledDate preserved for reactivation)",
-            recurringExpenseId);
+        logger.info("Deactivated recurring expense: id={}", recurringExpenseId);
 
         return true;
     }
 
     // ========================================================================
-    // Queries
+    // Querying Templates
     // ========================================================================
 
     @Override
@@ -237,59 +236,42 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
     @Transactional(readOnly = true)
     public List<RecurringExpense> listRecurringExpenses(
         Boolean active,
-        Long sourceAccountId,  // FIXED: Changed from Account to Long
+        Long sourceAccountId,
         TransactionFrequency frequency
     ) {
-        // Convert sourceAccountId to Account entity if provided
+        // If sourceAccountId filter is provided, fetch the Account entity
         Account sourceAccount = null;
         if (sourceAccountId != null) {
             sourceAccount = accountService.getAccount(sourceAccountId);
         }
 
-        // Handle all 8 filter combinations
-        // Pattern: active, account, frequency (each can be null or non-null)
-
-        if (active == null && sourceAccount == null && frequency == null) {
-            // No filters: return all
-            return recurringExpenseRepository.findAllByOrderByNextScheduledDateAsc();
-        }
-
-        if (active != null && sourceAccount == null && frequency == null) {
-            // Filter by active only
+        // Build query based on filter criteria
+        if (active != null && sourceAccount != null && frequency != null) {
+            return recurringExpenseRepository.findByActiveAndSourceAccountAndFrequencyOrderByNextScheduledDateAsc(
+                active, sourceAccount, frequency
+            );
+        } else if (active != null && sourceAccount != null) {
+            return recurringExpenseRepository.findByActiveAndSourceAccountOrderByNextScheduledDateAsc(
+                active, sourceAccount
+            );
+        } else if (active != null && frequency != null) {
+            return recurringExpenseRepository.findByActiveAndFrequencyOrderByNextScheduledDateAsc(
+                active, frequency
+            );
+        } else if (sourceAccount != null && frequency != null) {
+            return recurringExpenseRepository.findBySourceAccountAndFrequencyOrderByNextScheduledDateAsc(
+                sourceAccount, frequency
+            );
+        } else if (active != null) {
             return recurringExpenseRepository.findByActiveOrderByNextScheduledDateAsc(active);
-        }
-
-        if (active == null && sourceAccount != null && frequency == null) {
-            // Filter by account only
+        } else if (sourceAccount != null) {
             return recurringExpenseRepository.findBySourceAccountOrderByNextScheduledDateAsc(sourceAccount);
-        }
-
-        if (active == null && sourceAccount == null && frequency != null) {
-            // Filter by frequency only
+        } else if (frequency != null) {
             return recurringExpenseRepository.findByFrequencyOrderByNextScheduledDateAsc(frequency);
         }
 
-        if (active != null && sourceAccount != null && frequency == null) {
-            // Filter by active and account
-            return recurringExpenseRepository.findByActiveAndSourceAccountOrderByNextScheduledDateAsc(
-                active, sourceAccount);
-        }
-
-        if (active != null && sourceAccount == null && frequency != null) {
-            // Filter by active and frequency
-            return recurringExpenseRepository.findByActiveAndFrequencyOrderByNextScheduledDateAsc(
-                active, frequency);
-        }
-
-        if (active == null && sourceAccount != null && frequency != null) {
-            // Filter by account and frequency
-            return recurringExpenseRepository.findBySourceAccountAndFrequencyOrderByNextScheduledDateAsc(
-                sourceAccount, frequency);
-        }
-
-        // All three filters provided
-        return recurringExpenseRepository.findByActiveAndSourceAccountAndFrequencyOrderByNextScheduledDateAsc(
-            active, sourceAccount, frequency);
+        // No filters: return all ordered by next scheduled date
+        return recurringExpenseRepository.findAllByOrderByNextScheduledDateAsc();
     }
 
     // ========================================================================
@@ -308,24 +290,24 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
         }
 
         // Validate source account is still active
-        if (!template.getSourceAccount().isActive()) {
-            throw new InactiveAccountException(template.getSourceAccount().getId());
+        Account sourceAccount = template.getSourceAccount();
+        if (!sourceAccount.isActive()) {
+            throw new InactiveAccountException(sourceAccount.getId());
         }
 
-        // Idempotency check: has transaction already been generated for this scheduled date?
-        LocalDate scheduledDate = template.getNextScheduledDate();
-        boolean alreadyExists = transactionRepository.existsByRecurringExpenseAndDate(
+        // Idempotency check: Has transaction already been generated for this date?
+        boolean alreadyGenerated = transactionRepository.existsByRecurringExpenseAndDate(
             recurringExpenseId,
-            scheduledDate
+            template.getNextScheduledDate()
         );
 
-        if (alreadyExists) {
-            logger.info("Transaction already exists for recurring expense {} on date {}, skipping generation",
-                recurringExpenseId, scheduledDate);
-            return;  // Idempotent: no duplicate creation
+        if (alreadyGenerated) {
+            logger.info("Transaction already exists for recurring expense {} on date {}. Skipping generation.",
+                recurringExpenseId, template.getNextScheduledDate());
+            return;
         }
 
-        // Generate the transaction
+        // Generate transaction from template
         Transaction generatedTransaction = createTransactionFromTemplate(template);
 
         // Update template: advance schedule and record generation
@@ -342,6 +324,66 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
                 "amount={}, nextScheduledDate={}",
             recurringExpenseId, generatedTransaction.getId(),
             generatedTransaction.getAmount(), nextDate);
+    }
+
+    @Override
+    public Transaction generateTransactionManually(Long recurringExpenseId) {
+        RecurringExpense template = getRecurringExpense(recurringExpenseId);
+
+        // Validate template is active
+        if (!template.isActive()) {
+            throw new IllegalStateException(
+                "Cannot generate transaction from inactive recurring expense: " + recurringExpenseId
+            );
+        }
+
+        // Validate source account is still active
+        Account sourceAccount = template.getSourceAccount();
+        if (!sourceAccount.isActive()) {
+            throw new InactiveAccountException(sourceAccount.getId());
+        }
+
+        // Idempotency check: Does transaction already exist for this date?
+        // If so, retrieve and return it instead of creating a duplicate
+        Transaction existingTransaction = transactionRepository
+            .findWithFilters(
+                template.getNextScheduledDate(),
+                template.getNextScheduledDate(),
+                null,
+                null,
+                null
+            )
+            .stream()
+            .filter(t -> recurringExpenseId.equals(t.getRecurringExpenseId()))
+            .filter(t -> template.getNextScheduledDate().equals(t.getTransactionDate()))
+            .findFirst()
+            .orElse(null);
+
+        if (existingTransaction != null) {
+            logger.info("Transaction already exists for recurring expense {} on date {}. Returning existing transaction.",
+                recurringExpenseId, template.getNextScheduledDate());
+            return existingTransaction;
+        }
+
+        // Generate transaction from template
+        Transaction generatedTransaction = createTransactionFromTemplate(template);
+
+        // Update template: advance schedule and record generation
+        LocalDate nextDate = calculateNextScheduledDate(
+            template.getFrequency(),
+            template.getNextScheduledDate()
+        );
+
+        template.setNextScheduledDate(nextDate);
+        template.setLastGeneratedDate(generatedTransaction.getTransactionDate());
+        recurringExpenseRepository.save(template);
+
+        logger.info("Generated transaction from recurring expense: expenseId={}, transactionId={}, " +
+                "amount={}, nextScheduledDate={}",
+            recurringExpenseId, generatedTransaction.getId(),
+            generatedTransaction.getAmount(), nextDate);
+
+        return generatedTransaction;
     }
 
     @Override
@@ -443,16 +485,13 @@ public class RecurringExpenseServiceImpl implements RecurringExpenseService {
     }
 
     /**
-     * Validates source account is not null and has a valid ID.
+     * Validates source account ID is not null.
      *
-     * @param sourceAccount the account to validate
-     * @throws IllegalArgumentException if account is null or has null ID
+     * @param sourceAccountId the account ID to validate
+     * @throws IllegalArgumentException if account ID is null
      */
-    private void validateSourceAccount(Account sourceAccount) {
-        if (sourceAccount == null) {
-            throw new IllegalArgumentException("Source account cannot be null");
-        }
-        if (sourceAccount.getId() == null) {
+    private void validateSourceAccountId(Long sourceAccountId) {
+        if (sourceAccountId == null) {
             throw new IllegalArgumentException("Source account ID cannot be null");
         }
     }
