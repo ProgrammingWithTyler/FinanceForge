@@ -1,8 +1,8 @@
 package com.programmingwithtyler.financeforge.service;
 
-import com.programmingwithtyler.financeforge.domain.Account;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
 import com.programmingwithtyler.financeforge.domain.RecurringExpense;
+import com.programmingwithtyler.financeforge.domain.Transaction;
 import com.programmingwithtyler.financeforge.domain.TransactionFrequency;
 import com.programmingwithtyler.financeforge.service.exception.AccountNotFoundException;
 import com.programmingwithtyler.financeforge.service.exception.RecurringExpenseNotFoundException;
@@ -74,7 +74,7 @@ public interface RecurringExpenseService {
      * @param amount the fixed amount for each generated transaction; must be positive
      * @param category the budget category to assign to generated transactions
      * @param description a descriptive label for the recurring expense (e.g., "Netflix Subscription")
-     * @param sourceAccount the account from which expenses will be debited
+     * @param sourceAccountId the ID of the account from which expenses will be debited
      * @return the newly created RecurringExpense template with active status set to true
      * @throws IllegalArgumentException if any validation rule is violated
      * @throws AccountNotFoundException if the source account does not exist
@@ -85,7 +85,7 @@ public interface RecurringExpenseService {
                                             BigDecimal amount,
                                             BudgetCategory category,
                                             String description,
-                                            Account sourceAccount);
+                                            Long sourceAccountId);
 
     /**
      * Updates an existing recurring expense template.
@@ -150,42 +150,26 @@ public interface RecurringExpenseService {
     void deleteRecurringExpense(Long recurringExpenseId);
 
     /**
-     * Activates a recurring expense template.
+     * Activates an inactive recurring expense template.
      *
-     * <p>Once activated, the template will begin generating transactions when
-     * processScheduledExpenses is called and the nextScheduledDate is reached.</p>
+     * <p>Once activated, the template will be included in batch processing operations
+     * and will generate transactions on schedule.</p>
      *
-     * <h3>Activation Requirements</h3>
-     * <ul>
-     *   <li>Template must exist</li>
-     *   <li>nextScheduledDate must not be null</li>
-     *   <li>Template must not already be active</li>
-     * </ul>
-     *
-     * @param recurringExpenseId the ID of the recurring expense to activate
-     * @return true if the template was activated, false if already active
+     * @param recurringExpenseId the ID of the recurring expense template to activate
+     * @return true if the template was activated, false if it was already active
      * @throws RecurringExpenseNotFoundException if no template exists with the given ID
-     * @throws IllegalStateException if nextScheduledDate is null
+     * @throws IllegalStateException if nextScheduledDate is null (cannot activate without a schedule)
      */
     boolean activateRecurringExpense(Long recurringExpenseId);
 
     /**
-     * Deactivates a recurring expense template.
+     * Deactivates an active recurring expense template.
      *
-     * <p>Deactivating a template stops it from generating new transactions but preserves
-     * all configuration including the nextScheduledDate. The template can be reactivated
-     * later without losing scheduling information.</p>
+     * <p>Deactivated templates are excluded from batch processing and will not generate
+     * new transactions until reactivated. Existing transactions remain unaffected.</p>
      *
-     * <h3>Deactivation Behavior</h3>
-     * <ul>
-     *   <li>Template stops generating transactions</li>
-     *   <li>nextScheduledDate is preserved</li>
-     *   <li>All template data remains in the database</li>
-     *   <li>Previously generated transactions are unaffected</li>
-     * </ul>
-     *
-     * @param recurringExpenseId the ID of the recurring expense to deactivate
-     * @return true if the template was deactivated, false if already inactive
+     * @param recurringExpenseId the ID of the recurring expense template to deactivate
+     * @return true if the template was deactivated, false if it was already inactive
      * @throws RecurringExpenseNotFoundException if no template exists with the given ID
      */
     boolean deactivateRecurringExpense(Long recurringExpenseId);
@@ -263,6 +247,33 @@ public interface RecurringExpenseService {
     void generateTransaction(Long recurringExpenseId);
 
     /**
+     * Manually generates a transaction from a recurring expense template and returns it.
+     *
+     * <p>This method is identical to {@link #generateTransaction(Long)} but returns the
+     * generated (or existing) transaction for use in the manual generation API endpoint.
+     * This allows the controller to provide detailed feedback to users about what was generated.</p>
+     *
+     * <h3>Return Value Behavior</h3>
+     * <ul>
+     *   <li><strong>If transaction was generated:</strong> Returns the newly created Transaction</li>
+     *   <li><strong>If transaction already exists (idempotency):</strong> Returns the existing Transaction</li>
+     * </ul>
+     *
+     * <h3>Use Cases</h3>
+     * <ul>
+     *   <li>Manual generation endpoint for testing templates</li>
+     *   <li>One-off generation for schedule adjustments</li>
+     *   <li>User-triggered generation with feedback</li>
+     * </ul>
+     *
+     * @param recurringExpenseId the ID of the recurring expense template to generate from
+     * @return the generated or existing Transaction
+     * @throws RecurringExpenseNotFoundException if no template exists with the given ID
+     * @throws IllegalStateException if template is inactive or source account is inactive
+     */
+    Transaction generateTransactionManually(Long recurringExpenseId);
+
+    /**
      * Processes all active recurring expenses that are due as of the specified date.
      *
      * <p>This method is designed for batch job invocation (e.g., nightly cron job) to automatically
@@ -334,7 +345,7 @@ public interface RecurringExpenseService {
      * @param frequency the recurrence frequency to use for calculation
      * @param currentDate the current scheduled date from which to calculate the next date
      * @return the next scheduled date based on the frequency
-     * @throws IllegalArgumentException if frequency is null
+     * @throws IllegalArgumentException if frequency or currentDate is null
      */
     LocalDate calculateNextScheduledDate(TransactionFrequency frequency, LocalDate currentDate);
 }

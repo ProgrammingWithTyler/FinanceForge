@@ -1,84 +1,78 @@
 package com.programmingwithtyler.financeforge.api.dto.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.programmingwithtyler.financeforge.domain.BudgetCategory;
 import com.programmingwithtyler.financeforge.domain.Transaction;
 import com.programmingwithtyler.financeforge.domain.TransactionType;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
- * Response DTO for transaction data.
+ * Response DTO for transaction details in API responses.
  *
- * Includes account summaries (not full accounts) to minimize payload size.
- * Distinguishes between manual and auto-generated recurring transactions.
+ * <p>Provides complete transaction information including account summaries
+ * (lightweight references) instead of full account entities to prevent over-fetching.</p>
  *
- * Design decisions:
- * - sourceAccount is null for INCOME transactions
- * - destinationAccount is null for EXPENSE transactions
- * - category is null for INCOME and TRANSFER transactions
- * - All monetary amounts formatted to 2 decimal places
- * - Dates serialized as yyyy-MM-dd (ISO-8601)
+ * <p>This DTO is used in:</p>
+ * <ul>
+ *   <li>Transaction CRUD endpoints</li>
+ *   <li>GeneratedTransactionResponse (for manual recurring expense generation)</li>
+ *   <li>Transaction list/search results</li>
+ * </ul>
+ *
+ * @param id Unique identifier of the transaction
+ * @param type Transaction type (EXPENSE, INCOME, TRANSFER)
+ * @param sourceAccount Source account summary (debit side)
+ * @param destinationAccount Destination account summary (credit side, null for EXPENSE/INCOME)
+ * @param category Budget category (null for TRANSFER)
+ * @param amount Transaction amount (always positive)
+ * @param transactionDate Date when transaction occurred
+ * @param description User-provided description
+ * @param isRecurring Whether this transaction was auto-generated from a recurring expense template
+ * @param recurringExpenseId ID of the template that generated this (null if not recurring)
+ * @param createdAt Timestamp when transaction was recorded
  */
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public record TransactionResponse(
     Long id,
     TransactionType type,
     AccountSummary sourceAccount,
     AccountSummary destinationAccount,
-    BudgetCategory budgetCategory,
-
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
-    LocalDate transactionDate,
-
+    BudgetCategory category,
     BigDecimal amount,
+    LocalDate transactionDate,
     String description,
-    boolean isRecurring
+    Boolean isRecurring,
+    Long recurringExpenseId,
+    LocalDateTime createdAt
 ) {
     /**
-     * Factory method to create TransactionResponse from Transaction entity.
+     * Factory method to convert Transaction entity to response DTO.
      *
-     * Populates account summaries based on transaction type:
-     * - INCOME: only destinationAccount populated
-     * - EXPENSE: only sourceAccount populated
-     * - TRANSFER: both accounts populated
-     * - REFUND: only sourceAccount populated
+     * <p>Extracts all fields from the transaction and creates lightweight
+     * AccountSummary objects for source and destination accounts.</p>
      *
-     * @param transaction The domain transaction entity
-     * @return Complete transaction response with account summaries
+     * @param transaction The transaction entity to convert
+     * @return TransactionResponse DTO with all fields populated
+     * @throws IllegalArgumentException if transaction is null
      */
     public static TransactionResponse from(Transaction transaction) {
-        AccountSummary sourceAccount = null;
-        AccountSummary destinationAccount = null;
-
-        switch (transaction.getType()) {
-            case INCOME:
-                destinationAccount = AccountSummary.from(transaction.getDestinationAccount());
-                break;
-            case EXPENSE:
-                sourceAccount = AccountSummary.from(transaction.getSourceAccount());
-                break;
-            case TRANSFER:
-                sourceAccount = AccountSummary.from(transaction.getSourceAccount());
-                destinationAccount = AccountSummary.from(transaction.getDestinationAccount());
-                break;
-            case REFUND:
-                sourceAccount = AccountSummary.from(transaction.getSourceAccount());
-                break;
+        if (transaction == null) {
+            throw new IllegalArgumentException("Transaction cannot be null");
         }
 
         return new TransactionResponse(
             transaction.getId(),
             transaction.getType(),
-            sourceAccount,
-            destinationAccount,
-            transaction.getBudgetCategory(),
-            transaction.getTransactionDate(),
+            AccountSummary.from(transaction.getSourceAccount()),
+            AccountSummary.from(transaction.getDestinationAccount()), // null for EXPENSE/INCOME
+            transaction.getBudgetCategory(), // null for TRANSFER
             transaction.getAmount(),
+            transaction.getTransactionDate(),
             transaction.getDescription(),
-            transaction.isRecurring()
+            transaction.isRecurring(),
+            transaction.getRecurringExpenseId(), // null if not recurring
+            transaction.getCreatedAt()
         );
     }
 }
